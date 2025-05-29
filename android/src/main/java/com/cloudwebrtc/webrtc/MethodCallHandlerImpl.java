@@ -5,16 +5,18 @@ import static com.cloudwebrtc.webrtc.utils.MediaConstraintsUtils.parseMediaConst
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.graphics.SurfaceTexture;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.hardware.Camera;
 import android.hardware.Camera.CameraInfo;
 import android.media.MediaRecorder;
 import android.media.AudioAttributes;
 import android.media.AudioDeviceInfo;
 import android.os.Build;
+import android.os.Environment;
 import android.util.Log;
 import android.util.LongSparseArray;
-import android.view.Surface;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -37,10 +39,10 @@ import com.cloudwebrtc.webrtc.utils.EglUtils;
 import com.cloudwebrtc.webrtc.utils.ObjectType;
 import com.cloudwebrtc.webrtc.utils.PermissionUtils;
 import com.cloudwebrtc.webrtc.utils.Utils;
-import com.cloudwebrtc.webrtc.video.VideoCapturerInfo;
 import com.cloudwebrtc.webrtc.video.camera.CameraUtils;
 import com.cloudwebrtc.webrtc.video.camera.Point;
 import com.cloudwebrtc.webrtc.video.LocalVideoTrack;
+import com.effectssdk.tsvb.EffectsSDKStatus;
 import com.twilio.audioswitch.AudioDevice;
 
 import org.webrtc.AudioTrack;
@@ -95,7 +97,6 @@ import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.MethodChannel.Result;
 import io.flutter.view.TextureRegistry;
-import io.flutter.view.TextureRegistry.SurfaceTextureEntry;
 
 public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
   static public final String TAG = "FlutterWebRTCPlugin";
@@ -1015,6 +1016,226 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
         }
         break;
       }
+      case "getPipelineMode": {
+        String trackId = call.argument("trackId");
+        break;
+      }
+      case "auth": {
+        String trackId = call.argument("trackId");
+        String customerKey = call.argument("customerKey");
+        String apiUrl = call.argument("apiUrl");
+        EffectsSDKStatus status = initializeEffectsSdk(trackId, customerKey, apiUrl);
+        result.success(status.toString());
+        break;
+      }
+      case "localAuth": {
+        String trackId = call.argument("trackId");
+        String localKey = call.argument("localKey");
+        result.success(initializeEffectsSdkLocal(trackId, localKey).toString());
+        break;
+      }
+      case "setPipelineMode": {
+        String trackId = call.argument("trackId");
+        String pipelineMode = call.argument("pipelineMode");
+        setEffectsSdkPipelineMode(trackId, pipelineMode);
+        break;
+      }
+      case "setBlurPower": {
+        String trackId = call.argument("trackId");
+        double blurPower = call.argument("blurPower");
+        setEffectsSdkBlurPower(trackId, blurPower);
+        result.success(null);
+        break;
+      }
+      case "setBackgroundImage": {
+        String trackId = call.argument("trackId");
+        HashMap<String, Object> userMap = call.argument("image");
+        if (userMap == null) {
+          Log.e(TAG, "Missing image data");
+          break;
+        }
+        String type = (String) userMap.get("type");
+        if (type == null) {
+          Log.e(TAG, "Image type required");
+          break;
+        }
+        switch (type) {
+          case "filepath": {
+            String path = (String) userMap.get("path");
+            File sd = Environment.getExternalStorageDirectory();
+            File image = new File(sd + path);
+            BitmapFactory.Options bmOptions = new BitmapFactory.Options();
+            Bitmap bitmap = BitmapFactory.decodeFile(image.getAbsolutePath(), bmOptions);
+            setEffectsSdkBackgroundImage(trackId, bitmap);
+            break;
+          }
+          case "encoded": {
+            byte[] bitmapBytes = call.argument("data");
+            Bitmap bitmap = BitmapFactory.decodeByteArray(bitmapBytes, 0, bitmapBytes.length);
+            if (bitmap != null) {
+              setEffectsSdkBackgroundImage(trackId, bitmap);
+            } else {
+              Log.e(TAG, "Decode bitmap error");
+            }
+            break;
+          }
+          case "rgb": {
+            double rComponent = (double) userMap.get("r");
+            double gComponent = (double) userMap.get("g");
+            double bComponent = (double) userMap.get("b");
+            byte r = (byte) (rComponent * 255);
+            byte g = (byte) (gComponent * 255);
+            byte b = (byte) (bComponent * 255);
+            int i = ((255) << 24) | ((0xFF & r) << 16) | ((0xFF & g) << 8) | (0xFF & b);
+            Bitmap bmp = Bitmap.createBitmap(50, 50, Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(bmp);
+            canvas.drawColor(i);
+            setEffectsSdkBackgroundImage(trackId, bmp);
+            break;
+          }
+          case "raw": {
+            byte[] data = (byte[]) userMap.get("data");
+            //rgba only
+            String format = (String) userMap.get("format");
+            int width = (int) userMap.get("width");
+            int height = (int) userMap.get("height");
+            int stride = (int) userMap.get("stride");
+            Bitmap bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+            bmp.copyPixelsFromBuffer(ByteBuffer.wrap(data));
+            setEffectsSdkBackgroundImage(trackId, bmp);
+            break;
+          }
+          default:
+            Log.e(TAG, "Unknown image type");
+            break;
+        }
+        break;
+      }
+      case "enableBeautification": {
+        String trackId = call.argument("trackId");
+        boolean enableBeautification = call.argument("enable");
+        enableEffectsSdkBeautification(trackId, enableBeautification);
+        break;
+      }
+      case "isBeautificationEnabled": {
+        String trackId = call.argument("trackId");
+        boolean isEnabled = isEffectsSdkBeautificationEnabled(trackId);
+        result.success(isEnabled);
+        break;
+      }
+      case "setBeautificationPower": {
+        String trackId = call.argument("trackId");
+        double beautificationPower = call.argument("beautificationPower");
+        setEffectsSdkBeautificationPower(trackId, beautificationPower);
+        break;
+      }
+      case "getZoomLevel": {
+        String trackId = call.argument("trackId");
+        double zoomLevel = getEffectsSdkZoomLevel(trackId);
+        result.success(zoomLevel);
+        break;
+      }
+      case "setZoomLevel": {
+        String trackId = call.argument("trackId");
+        double zoomLevel = call.argument("zoomLevel");
+        setEffectsSdkZoomLevel(trackId, zoomLevel);
+        break;
+      }
+      case "enableSharpening": {
+        String trackId = call.argument("trackId");
+        boolean enableSharpening = call.argument("enable");
+        enableEffectsSdkSharpening(trackId, enableSharpening);
+        break;
+      }
+      case "getSharpeningStrength": {
+        String trackId = call.argument("trackId");
+        double sharpeningStrength = getEffectsSdkSharpeningStrength(trackId);
+        result.success(sharpeningStrength);
+        break;
+      }
+      case "setSharpeningStrength": {
+        String trackId = call.argument("trackId");
+        double strength = call.argument("strength");
+        setEffectsSdkSharpeningStrength(trackId, strength);
+        break;
+      }
+      case "setColorCorrectionMode": {
+        String trackId = call.argument("trackId");
+        String colorCorrectionMode = call.argument("colorCorrectionMode");
+        setEffectsSdkColorCorrectionMode(trackId, colorCorrectionMode);
+        break;
+      }
+      case "setColorFilterStrength": {
+        String trackId = call.argument("trackId");
+        double strength = call.argument("strength");
+        setEffectsSdkColorFilterStrength(trackId, strength);
+        break;
+      }
+      case "setColorGradingReferenceImage": {
+        String trackId = call.argument("trackId");
+        HashMap<String, Object> userMap = call.argument("image");
+        if (userMap == null) {
+          Log.e(TAG, "Missing image data");
+          break;
+        }
+        String type = (String) userMap.get("type");
+        if (type == null) {
+          Log.e(TAG, "Image type required");
+          break;
+        }
+        switch (type) {
+          case "filepath": {
+            String path = (String) userMap.get("path");
+            File sd = Environment.getExternalStorageDirectory();
+            File image = new File(sd + path);
+            BitmapFactory.Options bmOptions = new BitmapFactory.Options();
+            Bitmap bitmap = BitmapFactory.decodeFile(image.getAbsolutePath(), bmOptions);
+            setEffectsSdkColorGradingReferenceImage(trackId, bitmap);
+            break;
+          }
+          case "encoded": {
+            byte[] bitmapBytes = call.argument("data");
+            Bitmap bitmap = BitmapFactory.decodeByteArray(bitmapBytes, 0, bitmapBytes.length);
+            if (bitmap != null) {
+              setEffectsSdkColorGradingReferenceImage(trackId, bitmap);
+            } else {
+              Log.e(TAG, "Decode bitmap error");
+            }
+            break;
+          }
+          case "rgb": {
+            double rComponent = (double) userMap.get("r");
+            double gComponent = (double) userMap.get("g");
+            double bComponent = (double) userMap.get("b");
+            byte r = (byte) (rComponent * 255);
+            byte g = (byte) (gComponent * 255);
+            byte b = (byte) (bComponent * 255);
+            int i = ((255) << 24) | ((0xFF & r) << 16) | ((0xFF & g) << 8) | (0xFF & b);
+            Bitmap bmp = Bitmap.createBitmap(50, 50, Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(bmp);
+            canvas.drawColor(i);
+            setEffectsSdkColorGradingReferenceImage(trackId, bmp);
+            break;
+          }
+          case "raw": {
+            byte[] data = (byte[]) userMap.get("data");
+            //rgba only
+            String format = (String) userMap.get("format");
+            int width = (int) userMap.get("width");
+            int height = (int) userMap.get("height");
+            int stride = (int) userMap.get("stride");
+            Bitmap bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+            bmp.copyPixelsFromBuffer(ByteBuffer.wrap(data));
+            setEffectsSdkColorGradingReferenceImage(trackId, bmp);
+            break;
+          }
+          default:
+            Log.e(TAG, "Unknown image type");
+            break;
+        }
+        break;
+      }
+
       default:
         if(frameCryptor.handleMethodCall(call, result)) {
           break;
@@ -1608,6 +1829,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
 
   public void mediaStreamTrackSetEnabled(final String id, final boolean enabled, String peerConnectionId) {
     MediaStreamTrack track = getTrackForId(id, peerConnectionId);
+    getUserMediaImpl.enableEffectsSdkVideoStream(id, enabled);
 
     if (track == null) {
       Log.d(TAG, "mediaStreamTrackSetEnabled() track is null");
@@ -2290,4 +2512,70 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
             activity,
             permissions.toArray(new String[permissions.size()]), callback);
   }
+
+
+  void setEffectsSdkBlurPower(String trackId, double blurPower) {
+    getUserMediaImpl.setEffectsSdkBlurPower(trackId, blurPower);
+  }
+
+  EffectsSDKStatus initializeEffectsSdk(String trackId, String customerKey, String apiUrl) {
+    return getUserMediaImpl.initializeEffectsSdk(trackId, customerKey, apiUrl);
+  }
+
+  EffectsSDKStatus initializeEffectsSdkLocal(String trackId, String localKey) {
+    return getUserMediaImpl.initializeEffectsSdkLocal(trackId, localKey);
+  }
+
+  private void setEffectsSdkPipelineMode(String trackId, String pipelineMode) {
+    getUserMediaImpl.setEffectsSdkPipelineMode(trackId, pipelineMode);
+  }
+
+  private void setEffectsSdkBackgroundImage(String trackId, Bitmap bitmap) {
+    getUserMediaImpl.setEffectsSdkBitmapImage(trackId, bitmap);
+  }
+
+  private void enableEffectsSdkBeautification(String trackId, boolean enableBeautification) {
+    getUserMediaImpl.enableEffectsSdkBeautification(trackId, enableBeautification);
+  }
+
+  private boolean isEffectsSdkBeautificationEnabled(String trackId) {
+    return getUserMediaImpl.isEffectsSdkBeautificationEnabled(trackId);
+  }
+
+  private void setEffectsSdkBeautificationPower(String trackId, double beautificationPower) {
+    getUserMediaImpl.setEffectsSdkBeautificationPower(trackId, beautificationPower);
+  }
+
+  private double getEffectsSdkZoomLevel(String trackId) {
+    return getUserMediaImpl.getEffectsSdkZoomLevel(trackId);
+  }
+
+  private void setEffectsSdkZoomLevel(String trackId, double zoomLevel) {
+    getUserMediaImpl.setEffectsSdkZoomLevel(trackId, zoomLevel);
+  }
+
+  private void enableEffectsSdkSharpening(String trackId, boolean enableSharpening) {
+    getUserMediaImpl.enableEffectsSdkSharpening(trackId, enableSharpening);
+  }
+
+  private double getEffectsSdkSharpeningStrength(String trackId) {
+    return getUserMediaImpl.getEffectsSdkSharpeningStrength(trackId);
+  }
+
+  private void setEffectsSdkSharpeningStrength(String trackId, double strength) {
+    getUserMediaImpl.setEffectsSdkSharpeningStrength(trackId, strength);
+  }
+
+  private void setEffectsSdkColorCorrectionMode(String trackId, String colorCorrectionMode) {
+    getUserMediaImpl.setEffectsSdkColorCorrectionMode(trackId, colorCorrectionMode);
+  }
+
+  private void setEffectsSdkColorFilterStrength(String trackId, double strength) {
+    getUserMediaImpl.setEffectsSdkColorFilterStrength(trackId, strength);
+  }
+
+  private void setEffectsSdkColorGradingReferenceImage(String trackId, Bitmap bitmap) {
+    getUserMediaImpl.setEffectsSdkColorGradingReferenceImage(trackId, bitmap);
+  }
+
 }

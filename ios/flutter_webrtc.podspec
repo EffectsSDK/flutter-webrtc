@@ -16,6 +16,7 @@ A new flutter plugin project.
   s.public_header_files = 'Classes/**/*.h'
   s.dependency 'Flutter'
   s.dependency 'WebRTC-SDK', '125.6422.07'
+  s.dependency 'VideoEffectsSDK', '2.5.1'
   s.ios.deployment_target = '13.0'
   s.static_framework = true
   s.pod_target_xcconfig = {

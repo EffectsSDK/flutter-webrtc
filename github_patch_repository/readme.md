@@ -1,28 +1,53 @@
-# Flutter-WebRTC with Video Effects SDK
+# Flutter EffectsSDK integration
 
-This repository contains the fork of [Flutter-WebRTC](https://github.com/flutter-webrtc/flutter-webrtc) with [Video Effects SDK](https://effectssdk.ai) integration. **Video Effects SDK** has built-in real-time AI video enhancements that makes video meeting experience more effective and comfortable to your application.  
-  
-This fork adds functional of **Video Effects SDK** into [Flutter-WebRTC](https://github.com/flutter-webrtc/flutter-webrtc) API and you can easily use it. **Video Effects SDK** has effect only when enabled, the SDK applies enhancements to frames in local video stream, else is the same as original flutter-webrtc.  
-  
-Supported platforms:  
-* Android
-* iOS
+Tested for **flutter-webrtc v0.14.0**
 
-## How to use
+## Instructions
 
-1. Add git url into your dependencies. If original **Flutter-WebRTC** is already used, replace it with this fork.  
+Clone [flutter WebRTC](https://github.com/flutter-webrtc/flutter-webrtc) repository
+```sh
+git clone https://github.com/flutter-webrtc/flutter-webrtc.git
+```
+
+Go to the cloned dir.
+```sh 
+cd flutter-webrtc
+```
+
+[Optional] Switch to the required version
+```sh
+git switch -d v0.14.0
+```
+_For other versions, conflicts may occur._
+
+Apply the [patch](flutter-webrtc-effects-sdk.patch) to the flutter-webrtc repo
+```sh
+curl https://raw.githubusercontent.com/EffectsSDK/flutter-webrtc-integration/refs/heads/main/flutter-webrtc-effects-sdk.patch | git apply
+```
+_You can mannually download the [patch](flutter-webrtc-effects-sdk.patch) and apply it with git apply path/to/patch_
+
+Add flutter-webrtc as dependency to your project by path
 
 pubspec.yaml
 ```yaml
 dependencies:
-  flutter-webrtc:
-    git:
-      url: https://github.com/EffectsSDK/flutter-webrtc.git
+  flutter_webrtc:
+    path: path/to/flutter-webrtc
 ```
 
-2. Add `effectsSdkRequired` flag to your getUserMedia request
+### Android
+
+For android platform additionally you need:
+
+1. Download the Video Effects SDK release for Android
+2. Add the SDK as a WebRTC dependency by placing it in: **path/to/flutter-webrtc/android/libs/**
+
+## How to use
+
+1. Add effectsSdkRequired flag to your getUserMedia request
 
 ```dart
+
 final mediaConstraints = <String, dynamic>{
   'audio': false,
   'video': {
@@ -42,6 +67,7 @@ var stream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
 2. Call EffectsSDK methods by using WebRTC Helper
 
 ```dart
+
 var status = await Helper.auth(stream.getVideoTracks().first, 'YOUR_CUSTOMER_ID');
 switch (status) {
     case AuthStatus.active:
@@ -56,11 +82,16 @@ switch (status) {
 }
 ```
 
-## Effects SDK API
+## EffectsSDK methods
+
+Check platform specifications:
+
+1. [iOS](https://github.com/EffectsSDK/swift-video-effects-sdk)
+2. [android](https://github.com/EffectsSDK/android-integration-sample)
 
 ### Effects SDK Image
 
-class EffectsSdkImage.
+Image proxy for iOS/android compatibility.
 
 Can be created from:
 
@@ -71,11 +102,12 @@ Can be created from:
 
 ### Color correction options
 
-4 different modes are supported:
+4 different methods are supported:
 
-1. Color correction - Enhances colors using machine learning.
-2. Color grading - Adjusts colors using reference image color scheme.
-3. Low light - Makes the video brighter using machine learning, helps for video with dark environment.
+1. Color correction - use ML model for color correction
+2. Color grading - made color filter by using reference image color scheme
+3. Low light - use ML model for color correction (ust it only in dark places)
+4. Preset - predefined cube lut
 
 
 ### Helper methods

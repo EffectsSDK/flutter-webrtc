@@ -11,10 +11,13 @@ example/.flutter-plugins
 example/android/local.properties
 .dart_tool/package_config.json
 android/.project
+android/libs/*
+!android/libs/readme.txt
 example/ios/Runner/GeneratedPluginRegistrant.m
 example/ios/Runner/GeneratedPluginRegistrant.h
 example/ios/Flutter/Generated.xcconfig
 example/ios/Flutter/flutter_export_environment.sh
+flutter-webrtc-*.patch
 
 # Miscellaneous
 *.class

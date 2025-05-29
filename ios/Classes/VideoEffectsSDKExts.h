@@ -1,0 +1,1 @@
+../../common/darwin/classes/VideoEffectsSDKExts.h

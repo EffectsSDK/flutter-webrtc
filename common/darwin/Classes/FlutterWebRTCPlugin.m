@@ -18,6 +18,9 @@
 #import <WebRTC/RTCFieldTrials.h>
 #import <WebRTC/WebRTC.h>
 
+#import "VideoEffectsSDKContext.h"
+#import "VideoEffectsSDKExts.h"
+
 #import "LocalTrack.h"
 #import "LocalAudioTrack.h"
 #import "LocalVideoTrack.h"
@@ -104,6 +107,7 @@ void postEvent(FlutterEventSink _Nonnull sink, id _Nullable event) {
   BOOL _speakerOnButPreferBluetooth;
   AVAudioSessionPort _preferredInput;
   AudioManager* _audioManager;
+  VideoEffectsSDKContext* _vSdkContext;
 #if TARGET_OS_IPHONE
   FLutterRTCVideoPlatformViewFactory *_platformViewFactory;
 #endif
@@ -123,6 +127,8 @@ static FlutterWebRTCPlugin *sharedSingleton;
 @synthesize eventSink = _eventSink;
 @synthesize preferredInput = _preferredInput;
 @synthesize audioManager = _audioManager;
+
+@synthesize vSdkContext = _vSdkContext;
 
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar>*)registrar {
   FlutterMethodChannel* channel =
@@ -1541,7 +1547,9 @@ bypassVoiceProcessing:(BOOL)bypassVoiceProcessing {
                                                 details:nil]);
                 }
 #endif
-    } else {
+	} else if ([self handleEffectsSDKCall:call result:result]) {
+		
+	} else {
     [self handleFrameCryptorMethodCall:call result:result];
   }
 }
@@ -2379,4 +2387,375 @@ bypassVoiceProcessing:(BOOL)bypassVoiceProcessing {
     }
     return nil;
 }
+
+-(bool)handleEffectsSDKCall:(FlutterMethodCall*)call result:(FlutterResult)result {
+	if([@"auth" isEqualToString:call.method]) {
+		[self handleAuthCall:call result:result];
+		return true;
+	}
+	if([@"localAuth" isEqualToString:call.method]) {
+		[self handleLocalAuthCall:call result:result];
+		return true;
+	}
+	if ([@"setPipelineMode" isEqualToString:call.method]) {
+		NSString* trackId = call.arguments[@"trackId"];
+		NSString* pipelineMode = call.arguments[@"pipelineMode"];
+		LocalVideoTrack* track = 
+			[self getLocalVideoTrackForEffectsSDKWithId:trackId method:call.method result:result];
+		if (nil == track) {
+			return true;
+		}
+		if (![self checkAuth:call.method result:result]) {
+			return true;
+		}
+		[self ensureSDKControllerOfTrack:track];
+		FlutterError* error = [track.sdkPipelineController setPipelineMode:pipelineMode];
+		result(error);
+		return true;
+	}
+	if ([@"setBlurPower" isEqualToString:call.method]) {
+		NSString* trackId = call.arguments[@"trackId"];
+		float power = ((NSNumber*)call.arguments[@"blurPower"]).floatValue;
+		LocalVideoTrack* track = 
+			[self getLocalVideoTrackForEffectsSDKWithId:trackId method:call.method result:result];
+		if (nil == track) {
+			return true;
+		}
+		
+		[self ensureSDKControllerOfTrack:track];
+		[track.sdkPipelineController setBlurPower:power];
+		return true;
+	}
+	if ([@"setBackgroundImage" isEqualToString:call.method]) {
+		NSString* trackId = call.arguments[@"trackId"];
+		NSDictionary* imageParams = call.arguments[@"image"];
+		id<TSVBFrame> frame = [self loadImage:imageParams];
+		if (nil == frame) {
+			[self placeImageErrorToResult:result method:call.method];
+			return true;
+		}
+		LocalVideoTrack* track = 
+			[self getLocalVideoTrackForEffectsSDKWithId:trackId method:call.method result:result];
+		if (nil == track) {
+			return true;
+		}
+		[self ensureSDKControllerOfTrack:track];
+		[track.sdkPipelineController setBackground:frame];
+		result(nil);
+		return true;
+	}
+	if ([@"enableBeautification" isEqualToString:call.method]) {
+		NSString* trackId = call.arguments[@"trackId"];
+		bool enable = ((NSNumber*)call.arguments[@"enable"]).boolValue;
+		LocalVideoTrack* track = 
+			[self getLocalVideoTrackForEffectsSDKWithId:trackId method:call.method result:result];
+		if (nil == track) {
+			return true;
+		}
+		if (![self checkAuth:call.method result:result]) {
+			return true;
+		}
+		if (!enable && (nil == track.sdkPipelineController)) {
+			return true;
+		}
+		[self ensureSDKControllerOfTrack:track];
+		FlutterError* error = [track.sdkPipelineController setBeautificationEnabled:enable];
+		result(error);
+		return true;
+	}
+	if ([@"isBeautificationEnabled" isEqualToString:call.method]) {
+		NSString* trackId = call.arguments[@"trackId"];
+		LocalVideoTrack* track = 
+			[self getLocalVideoTrackForEffectsSDKWithId:trackId method:call.method result:result];
+		if (nil == track) {
+			return true;
+		}
+		result([NSNumber numberWithBool:[[track sdkPipelineController] beautificationEnabled]]);
+		return true;
+	}
+	if ([@"setBeautificationPower" isEqualToString:call.method]) {
+		NSString* trackId = call.arguments[@"trackId"];
+		float power = ((NSNumber*)call.arguments[@"beautificationPower"]).floatValue;
+		LocalVideoTrack* track = 
+			[self getLocalVideoTrackForEffectsSDKWithId:trackId method:call.method result:result];
+		if (nil == track) {
+			return true;
+		}
+		[self ensureSDKControllerOfTrack:track];
+		track.sdkPipelineController.beautificationPower = power;
+		result(nil);
+		return true;
+	}
+	if ([@"getZoomLevel" isEqualToString:call.method]) {
+		NSString* trackId = call.arguments[@"trackId"];
+		LocalVideoTrack* track = 
+			[self getLocalVideoTrackForEffectsSDKWithId:trackId method:call.method result:result];
+		if (nil == track) {
+			return true;
+		}
+		result([NSNumber numberWithFloat:[[track sdkPipelineController] zoomLevel]]);
+		return true;
+	}
+	if ([@"setZoomLevel" isEqualToString:call.method]) {
+		NSString* trackId = call.arguments[@"trackId"];
+		float level = ((NSNumber*)call.arguments[@"zoomLevel"]).floatValue;
+		LocalVideoTrack* track = 
+			[self getLocalVideoTrackForEffectsSDKWithId:trackId method:call.method result:result];
+		if (nil == track) {
+			return true;
+		}
+		if (![self checkAuth:call.method result:result]) {
+			return true;
+		}
+		[self ensureSDKControllerOfTrack:track];
+		FlutterError* error = 
+			[track.sdkPipelineController setZoomLevel:level];
+		result(error);
+		return true;
+	}
+	if ([@"enableSharpening" isEqualToString:call.method]) {
+		NSString* trackId = call.arguments[@"trackId"];
+		bool enabled = ((NSNumber*)call.arguments[@"enable"]).boolValue;
+		LocalVideoTrack* track = 
+			[self getLocalVideoTrackForEffectsSDKWithId:trackId method:call.method result:result];
+		if (nil == track) {
+			return true;
+		}
+		if (![self checkAuth:call.method result:result]) {
+			return true;
+		}
+		[self ensureSDKControllerOfTrack:track];
+		FlutterError* error = 
+			[track.sdkPipelineController setSharpeningEnabled:enabled];
+		result(error);
+		return true;
+	}
+	if ([@"getSharpeningStrength" isEqualToString:call.method]) {
+		NSString* trackId = call.arguments[@"trackId"];
+		LocalVideoTrack* track = 
+			[self getLocalVideoTrackForEffectsSDKWithId:trackId method:call.method result:result];
+		if (nil == track) {
+			return true;
+		}
+		[self ensureSDKControllerOfTrack:track];
+		result([NSNumber numberWithFloat:track.sdkPipelineController.sharpeningStrength]);
+		return true;
+	}
+	if ([@"setSharpeningStrength" isEqualToString:call.method]) {
+		NSString* trackId = call.arguments[@"trackId"];
+		float strength = ((NSNumber*)call.arguments[@"strength"]).floatValue;
+		LocalVideoTrack* track = 
+			[self getLocalVideoTrackForEffectsSDKWithId:trackId method:call.method result:result];
+		if (nil == track) {
+			return true;
+		}
+		[self ensureSDKControllerOfTrack:track];
+		track.sdkPipelineController.sharpeningStrength = strength;
+		result(nil);
+		return true;
+	}
+	if ([@"setColorCorrectionMode" isEqualToString:call.method]) {
+		NSString* trackId = call.arguments[@"trackId"];
+		NSString* mode = call.arguments[@"colorCorrectionMode"];
+		LocalVideoTrack* track = 
+			[self getLocalVideoTrackForEffectsSDKWithId:trackId method:call.method result:result];
+		if (nil == track) {
+			return true;
+		}
+		if (![self checkAuth:call.method result:result]) {
+			return true;
+		}
+		[self ensureSDKControllerOfTrack:track];
+		FlutterError* error = [track.sdkPipelineController setColorFilterMode:mode];
+		result(error);
+		return true;
+	}
+	if ([@"setColorFilterStrength" isEqualToString:call.method]) {
+		NSString* trackId = call.arguments[@"trackId"];
+		float strength = ((NSNumber*)call.arguments[@"strength"]).floatValue;
+		LocalVideoTrack* track = 
+			[self getLocalVideoTrackForEffectsSDKWithId:trackId method:call.method result:result];
+		if (nil == track) {
+			return true;
+		}
+		[self ensureSDKControllerOfTrack:track];
+		track.sdkPipelineController.sharpeningStrength = strength;
+		result(nil);
+		return true;
+	}
+	if ([@"setColorGradingReferenceImage" isEqualToString:call.method]) {
+		NSString* trackId = call.arguments[@"trackId"];
+		id<TSVBFrame> frame = [self loadImage:call.arguments[@"reference"]];
+		if (nil == frame) {
+			[self placeImageErrorToResult:result method:call.method];
+			return true;
+		}
+		LocalVideoTrack* track = 
+			[self getLocalVideoTrackForEffectsSDKWithId:trackId method:call.method result:result];
+		if (nil == track) {
+			return true;
+		}
+		[self ensureSDKControllerOfTrack:track];
+		track.sdkPipelineController.colorGradingReference = frame;
+		result(nil);
+		return true;
+	}
+	
+	return false;
+}
+
+-(LocalVideoTrack*)getLocalVideoTrackForEffectsSDKWithId:(NSString*)trackId method:(NSString*)method result:(FlutterResult)result {
+	id<LocalTrack> localTrack = [_localTracks objectForKey:trackId];
+	if ((nil != localTrack) && [localTrack isKindOfClass:[LocalVideoTrack class]]) {
+		return localTrack;
+	}
+	
+	result([FlutterError errorWithCode:[NSString stringWithFormat:@"%@ failed", method]
+							  message:@"Error: Video Effects SDK is only available for Local Video Tracks"
+								details:nil]);
+	return nil;
+}
+
+-(void)ensureSDKControllerOfTrack:(nonnull LocalVideoTrack*)track {
+	if (nil == track.sdkPipelineController) {
+		[self ensureVideoEffectsSDKContext];
+		track.sdkPipelineController = [_vSdkContext newPipelineControllerWithAdapter:track.processing];
+	}
+}
+
+-(bool)checkAuth:(NSString*)method result:(FlutterResult)result {
+	if (nil != _vSdkContext) {
+		enum AuthState state = _vSdkContext.authState;
+		if (AuthStateAuthorized == state) {
+			return true;
+		}
+	}
+	
+	result([FlutterError errorWithCode:[NSString stringWithFormat:@"%@ failed", method]
+							  message:@"Error: Video Effects SDK is not authorizaed"
+								details:nil]);
+	return false;
+}
+
+-(void)ensureVideoEffectsSDKContext {
+	if (nil != _vSdkContext) {
+		return;
+	}
+	
+	_vSdkContext = [VideoEffectsSDKContext new];
+}
+
+-(void)handleAuthCall:(FlutterMethodCall*)call result:(FlutterResult)result {
+	if (nil != _vSdkContext) {
+		enum AuthState state = _vSdkContext.authState;
+		if (AuthStateAuthorizing == state) {
+			result([FlutterError errorWithCode:[NSString stringWithFormat:@"%@ failed",call.method]
+									  message:@"Error: Authorization is already in progress"
+										details:nil]);
+			return;
+		}
+		if (AuthStateAuthorized == state) {
+			result(nameOfAuthStatus(TSVBAuthStatusActive));
+			return;
+		}
+	}
+	NSDictionary* argsMap = call.arguments;
+	NSString* customerID = argsMap[@"customerKey"];
+	id apiUrlObject = argsMap[@"apiUrl"];
+	NSString* apiUrl = nil;
+	if ((nil != apiUrlObject) && ([NSNull null] != apiUrlObject)) {
+		apiUrl = apiUrlObject;
+	}
+	if (nil == customerID || customerID.length < 1) {
+		result([FlutterError errorWithCode:[NSString stringWithFormat:@"%@ failed",call.method]
+								  message:@"Error: customerID must not be empty!"
+									details:nil]);
+		return;
+	}
+	
+	[self ensureVideoEffectsSDKContext];
+	
+	_vSdkContext.authState = AuthStateAuthorizing;
+	VideoEffectsSDKContext* context = _vSdkContext;
+	[_vSdkContext.sdkFactory authWithCustomerID:customerID
+										 apiUrl:[NSURL URLWithString:apiUrl]
+							  completionHandler:^(id<TSVBAuthResult>  _Nullable authResult, NSError * _Nullable error) {
+		if (nil != error) {
+			context.authState = AuthStateNotAuthorized;
+			result([FlutterError errorWithCode:@"Authorization error"
+									  message:error.localizedDescription
+										details:nil]);
+			return;
+		}
+		
+		context.authState = (TSVBAuthStatusActive == authResult.status)? 
+			AuthStateAuthorized : AuthStateNotAuthorized;
+		result(nameOfAuthStatus(authResult.status));
+	}];
+}
+
+-(void)handleLocalAuthCall:(FlutterMethodCall*)call result:(FlutterResult)result {
+	if (nil != _vSdkContext) {
+		enum AuthState state = _vSdkContext.authState;
+		if (AuthStateAuthorizing == state) {
+			result([FlutterError errorWithCode:[NSString stringWithFormat:@"%@ failed",call.method]
+									  message:@"Error: Authorization is already in progress"
+										details:nil]);
+			return;
+		}
+		if (AuthStateAuthorized == state) {
+			result(nameOfAuthStatus(TSVBAuthStatusActive));
+			return;
+		}
+	}
+	NSDictionary* argsMap = call.arguments;
+	NSString* localKey = argsMap[@"localKey"];
+	[self ensureVideoEffectsSDKContext];
+	id<TSVBAuthResult> authResult = [_vSdkContext.sdkFactory authWithKey:localKey];
+	_vSdkContext.authState = (TSVBAuthStatusActive == authResult.status)?
+		AuthStateAuthorized : AuthStateNotAuthorized;
+	
+	result(nameOfAuthStatus(authResult.status));
+}
+
+-(id<TSVBFrame>)loadImage:(NSDictionary*)params {
+	NSString* type = params[@"type"];
+	if ([@"encoded" isEqualToString:type]) {
+		FlutterStandardTypedData* typedData = params[@"data"];
+		NSData* data = typedData.data;
+		return [[_vSdkContext frameFactory] imageWithData:data];
+	}
+	if ([@"rgb" isEqualToString:type]) {
+		float r = ((NSNumber*)params[@"r"]).floatValue;
+		float g = ((NSNumber*)params[@"g"]).floatValue;
+		float b = ((NSNumber*)params[@"b"]).floatValue;
+		return [SDKFrameFactoryHelper solidFrameWithRed:r green:g blue:b factory:[_vSdkContext frameFactory]];
+	}
+	if ([@"filepath" isEqualToString:type]) {
+		NSString* path = params[@"path"];
+		return [[_vSdkContext frameFactory] imageWithContentOfFile:path];
+	}
+	if ([@"raw" isEqualToString:type]) {
+		NSData* data= ((FlutterStandardTypedData*)params[@"data"]).data;
+		int width = ((NSNumber*)params[@"width"]).intValue;
+		int height = ((NSNumber*)params[@"height"]).intValue;
+		int stride = ((NSNumber*)params[@"stride"]).intValue;
+		return [[_vSdkContext frameFactory] newFrameWithFormat:TSVBFrameFormatRgba32
+														  data:(void*)data.bytes
+												  bytesPerLine:stride
+														 width:width
+														height:height
+													  makeCopy:true];
+	}
+	return nil;
+}
+
+-(void)placeImageErrorToResult:(FlutterResult)result method:(NSString*)method {
+	result(
+		[FlutterError errorWithCode:[NSString stringWithFormat:@"%@ failed", method]
+							message:@"Failure to load image"
+							details:nil]
+	);
+}
+
 @end

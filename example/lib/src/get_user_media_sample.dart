@@ -60,13 +60,13 @@ class _GetUserMediaSampleState extends State<GetUserMediaSample> {
     final mediaConstraints = <String, dynamic>{
       'audio': false,
       'video': {
-        'mandatory': {
-          'minWidth':
-              '640', // Provide your own width, height and frame rate here
+        'mandatory': { // Provide your own width, height and frame rate here
+          'minWidth': '640',
           'minHeight': '480',
           'minFrameRate': '30',
         },
         'facingMode': 'user',
+        'effectsSdkRequired': true,
         'optional': [],
       }
     };
@@ -76,6 +76,21 @@ class _GetUserMediaSampleState extends State<GetUserMediaSample> {
       _mediaDevicesList = await navigator.mediaDevices.enumerateDevices();
       _localStream = stream;
       _localRenderer.srcObject = _localStream;
+      var status = await Helper.auth(stream.getVideoTracks().first, 'YOUR_CUSTOMER_ID');
+      switch (status) {
+        case AuthStatus.active:
+          Helper.setEffectsSdkPipelineMode(stream.getVideoTracks().first, PipelineMode.blur);
+          Helper.setEffectsSdkBlurPower(stream.getVideoTracks().first, 0.6);
+        case AuthStatus.expired:
+          // TODO: Handle this case.
+        case AuthStatus.inactive:
+          // TODO: Handle this case.
+        case AuthStatus.unavailable:
+          // TODO: Handle this case.
+        case AuthStatus.error:
+          // TODO: Handle this case.
+      }
+
     } catch (e) {
       print(e.toString());
     }

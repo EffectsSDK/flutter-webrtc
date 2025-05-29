@@ -53,6 +53,7 @@ android {
 
 dependencies {
     implementation 'io.github.webrtc-sdk:android:125.6422.03'
+    implementation(files("libs/Effects_SDK_v.2.11.4.aar"))
     implementation 'com.github.davidliu:audioswitch:89582c47c9a04c62f90aa5e57251af4800a62c9a'
     implementation 'androidx.annotation:annotation:1.1.0'
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"

@@ -9,6 +9,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.graphics.Point;
 import android.hardware.camera2.CameraManager;
 import android.media.AudioDeviceInfo;
@@ -49,6 +50,8 @@ import com.cloudwebrtc.webrtc.utils.ObjectType;
 import com.cloudwebrtc.webrtc.utils.PermissionUtils;
 import com.cloudwebrtc.webrtc.video.LocalVideoTrack;
 import com.cloudwebrtc.webrtc.video.VideoCapturerInfo;
+import com.cloudwebrtc.webrtc.video.camera.EffectsSDKVideoCapturer;
+import com.effectssdk.tsvb.EffectsSDKStatus;
 
 import org.webrtc.AudioSource;
 import org.webrtc.AudioTrack;
@@ -163,6 +166,144 @@ public class GetUserMediaImpl {
                 });
     }
 
+    public void setEffectsSdkBlurPower(String trackId, double blurPower) {
+        EffectsSDKVideoCapturer capturer = getEffectsSdkVideoCapturer(trackId);
+        if (capturer != null) {
+            capturer.setBlurPower((float) blurPower);
+        }
+    }
+
+    public EffectsSDKStatus initializeEffectsSdk(String trackId, String customerId, String url) {
+        EffectsSDKVideoCapturer capturer = getEffectsSdkVideoCapturer(trackId);
+        if (capturer != null) {
+            return capturer.initializeEffectsSdk(customerId, url);
+        }
+        return EffectsSDKStatus.INACTIVE;
+    }
+
+    public void enableEffectsSdkVideoStream(String trackId, boolean enabled) {
+        EffectsSDKVideoCapturer capturer = getEffectsSdkVideoCapturer(trackId);
+        if (capturer != null) {
+            capturer.enableVideo(enabled);
+        }
+    }
+
+    public EffectsSDKStatus initializeEffectsSdkLocal(String trackId, String localKey) {
+        EffectsSDKVideoCapturer capturer = getEffectsSdkVideoCapturer(trackId);
+        if (capturer != null) {
+            return capturer.initializeEffectsSdkLocal(localKey);
+        }
+        return EffectsSDKStatus.INACTIVE;
+    }
+
+    public void setEffectsSdkPipelineMode(String trackId, String pipelineMode) {
+        EffectsSDKVideoCapturer capturer = getEffectsSdkVideoCapturer(trackId);
+        if (capturer != null) {
+            capturer.setPipelineMode(pipelineMode);
+        }
+    }
+
+    public void enableEffectsSdkBeautification(String trackId, boolean enableBeautification) {
+        EffectsSDKVideoCapturer capturer = getEffectsSdkVideoCapturer(trackId);
+        if (capturer != null) {
+            capturer.enableBeautification(enableBeautification);
+        }
+    }
+
+    public boolean isEffectsSdkBeautificationEnabled(String trackId) {
+        EffectsSDKVideoCapturer capturer = getEffectsSdkVideoCapturer(trackId);
+        if (capturer != null) {
+            return capturer.isBeautificationEnabled();
+        }
+        return false;
+    }
+
+    public void setEffectsSdkBeautificationPower(String trackId, double beautificationPower) {
+        EffectsSDKVideoCapturer capturer = getEffectsSdkVideoCapturer(trackId);
+        if (capturer != null) {
+            capturer.setBeautificationPower(beautificationPower);
+        }
+    }
+
+    public double getEffectsSdkZoomLevel(String trackId) {
+        EffectsSDKVideoCapturer capturer = getEffectsSdkVideoCapturer(trackId);
+        if (capturer != null) {
+            return capturer.getZoomLevel();
+        }
+        return 0;
+    }
+
+    public void setEffectsSdkZoomLevel(String trackId, double zoomLevel) {
+        EffectsSDKVideoCapturer capturer = getEffectsSdkVideoCapturer(trackId);
+        if (capturer != null) {
+            capturer.setZoomLevel(zoomLevel);
+        }
+    }
+
+    public void enableEffectsSdkSharpening(String trackId, boolean enableSharpening) {
+        EffectsSDKVideoCapturer capturer = getEffectsSdkVideoCapturer(trackId);
+        if (capturer != null) {
+            capturer.enableSharpening(enableSharpening);
+        }
+    }
+
+    public double getEffectsSdkSharpeningStrength(String trackId) {
+        EffectsSDKVideoCapturer capturer = getEffectsSdkVideoCapturer(trackId);
+        if (capturer != null) {
+            return capturer.getSharpeningStrength();
+        }
+        return 0;
+    }
+
+    public void setEffectsSdkSharpeningStrength(String trackId, double strength) {
+        EffectsSDKVideoCapturer capturer = getEffectsSdkVideoCapturer(trackId);
+        if (capturer != null) {
+            capturer.setSharpeningStrength(strength);
+        }
+    }
+
+    public void setEffectsSdkColorFilterStrength(String trackId, double strength) {
+        EffectsSDKVideoCapturer capturer = getEffectsSdkVideoCapturer(trackId);
+        if (capturer != null) {
+            capturer.setColorFilterStrength(strength);
+        }
+    }
+
+    public void setEffectsSdkBitmapImage(String trackId, Bitmap bitmap) {
+        EffectsSDKVideoCapturer capturer = getEffectsSdkVideoCapturer(trackId);
+        if (capturer != null) {
+            capturer.setBackgroundBitmap(bitmap);
+        }
+    }
+
+    public void setEffectsSdkColorGradingReferenceImage(String trackId, Bitmap bitmap) {
+        EffectsSDKVideoCapturer capturer = getEffectsSdkVideoCapturer(trackId);
+        if (capturer != null) {
+            capturer.setColorGradingReference(bitmap);
+        }
+    }
+
+    public void setEffectsSdkColorCorrectionMode(String trackId, String colorCorrectionMode) {
+        EffectsSDKVideoCapturer capturer = getEffectsSdkVideoCapturer(trackId);
+        if (capturer != null) {
+            capturer.setColorCorrectionMode(colorCorrectionMode);
+        }
+    }
+
+    private EffectsSDKVideoCapturer getEffectsSdkVideoCapturer(String trackId) {
+        try {
+            VideoCapturerInfoEx info = mVideoCapturers.get(trackId);
+            if (info != null) {
+                return (EffectsSDKVideoCapturer) info.capturer;
+            }
+        } catch (ClassCastException e) {
+            Log.w(TAG, "Can't get EffectsSDKVideoCapturer instance. Make sure effectsSdkRequired is true.");
+        }
+        return null;
+    }
+
+
+
     public static class ScreenRequestPermissionsFragment extends Fragment {
 
         private ResultReceiver resultReceiver = null;
@@ -271,14 +412,24 @@ public class GetUserMediaImpl {
      * if not matched camera with specified facing mode.
      */
     private Pair<String, VideoCapturer> createVideoCapturer(
-            CameraEnumerator enumerator, boolean isFacing, String sourceId, CameraEventsHandler cameraEventsHandler) {
+            CameraEnumerator enumerator,
+            boolean isFacing,
+            String sourceId,
+            CameraEventsHandler cameraEventsHandler,
+            boolean effectsSdkRequired
+    ) {
         VideoCapturer videoCapturer;
         // if sourceId given, use specified sourceId first
         final String[] deviceNames = enumerator.getDeviceNames();
         if (sourceId != null && !sourceId.equals("")) {
             for (String name : deviceNames) {
                 if (name.equals(sourceId)) {
-                    videoCapturer = enumerator.createCapturer(name, cameraEventsHandler);
+                    if (!effectsSdkRequired) {
+                        videoCapturer = enumerator.createCapturer(name, cameraEventsHandler);
+                    } else {
+                        // Create EffectsSDK capturer here
+                        videoCapturer = new EffectsSDKVideoCapturer(name, cameraEventsHandler, enumerator);
+                    }
                     if (videoCapturer != null) {
                         Log.d(TAG, "create user specified camera " + name + " succeeded");
                         return new Pair<>(name, videoCapturer);
@@ -294,10 +445,14 @@ public class GetUserMediaImpl {
         String facingStr = isFacing ? "front" : "back";
         for (String name : deviceNames) {
             if (enumerator.isFrontFacing(name) == isFacing) {
-                videoCapturer = enumerator.createCapturer(name, cameraEventsHandler);
+                if (!effectsSdkRequired) {
+                    videoCapturer = enumerator.createCapturer(name, cameraEventsHandler);
+                } else {
+                    // Create EffectsSDK capturer here
+                    videoCapturer = new EffectsSDKVideoCapturer(name, cameraEventsHandler, enumerator);
+                }
                 if (videoCapturer != null) {
                     Log.d(TAG, "Create " + facingStr + " camera " + name + " succeeded");
-
                     return new Pair<>(name, videoCapturer);
                 } else {
                     Log.e(TAG, "Create " + facingStr + " camera " + name + " failed");
@@ -307,7 +462,12 @@ public class GetUserMediaImpl {
 
         // falling back to the first available camera
         if (deviceNames.length > 0) {
-            videoCapturer = enumerator.createCapturer(deviceNames[0], cameraEventsHandler);
+            if (!effectsSdkRequired) {
+                videoCapturer = enumerator.createCapturer(deviceNames[0], cameraEventsHandler);
+            } else {
+                // Create EffectsSDK capturer here
+                videoCapturer = new EffectsSDKVideoCapturer(deviceNames[0], cameraEventsHandler, enumerator);
+            }
             Log.d(TAG, "Falling back to the first available camera");
             return new Pair<>(deviceNames[0], videoCapturer);
         }
@@ -353,6 +513,17 @@ public class GetUserMediaImpl {
         }
 
         return null;
+    }
+
+    private boolean getEffectsSDKConstraint(ConstraintsMap mediaConstraints) {
+        try {
+            if (mediaConstraints != null && mediaConstraints.hasKey("effectsSdkRequired")) {
+                return mediaConstraints.getBoolean("effectsSdkRequired");
+            }
+        } catch (NullPointerException e) {
+            return false;
+        }
+        return false;
     }
 
     private ConstraintsMap getUserAudio(ConstraintsMap constraints, MediaStream stream) {
@@ -723,8 +894,15 @@ public class GetUserMediaImpl {
         String facingMode = getFacingMode(videoConstraintsMap);
         isFacing = facingMode == null || !facingMode.equals("environment");
         String deviceId = getSourceIdConstraint(videoConstraintsMap);
+        boolean effectsSdkRequired = getEffectsSDKConstraint(videoConstraintsMap);
         CameraEventsHandler cameraEventsHandler = new CameraEventsHandler();
-        Pair<String, VideoCapturer> result = createVideoCapturer(cameraEnumerator, isFacing, deviceId, cameraEventsHandler);
+        Pair<String, VideoCapturer> result = createVideoCapturer(
+                cameraEnumerator,
+                isFacing,
+                deviceId,
+                cameraEventsHandler,
+                effectsSdkRequired
+        );
 
         if (result == null) {
             return null;
