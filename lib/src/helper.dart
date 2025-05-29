@@ -255,10 +255,10 @@ class Helper {
   ///
   /// - [mediaStreamTrack]: Target media track
   /// - [blurPower]: Blur strength (0.0 - 1.0 where 1.0 is maximum blur)
-  static void setEffectsSdkBlurPower(
+  static Future<void> setEffectsSdkBlurPower(
       MediaStreamTrack mediaStreamTrack,
-      double blurPower) {
-    WebRTC.invokeMethod(
+      double blurPower) async {
+    await WebRTC.invokeMethod(
       'setBlurPower',
       <String, dynamic>{'trackId': mediaStreamTrack.id, 'blurPower': blurPower},
     );
@@ -312,11 +312,11 @@ class Helper {
   ///
   /// - [mediaStreamTrack]: Target media track
   /// - [power]: Effect strength (0.0 - 1.0)
-  static void setEffectsSdkBeautificationPower(
+  static Future<void> setEffectsSdkBeautificationPower(
     MediaStreamTrack mediaStreamTrack,
     double power,
-  ) {
-    WebRTC.invokeMethod(
+  ) async {
+    await WebRTC.invokeMethod(
       'setBeautificationPower',
       <String, dynamic>{
         'trackId': mediaStreamTrack.id,
@@ -355,11 +355,11 @@ class Helper {
   ///
   /// - [mediaStreamTrack]: Target media track
   /// - [enable]: true to enable, false to disable
-  static void enableEffectsSdkSharpening(
+  static Future<void> enableEffectsSdkSharpening(
     MediaStreamTrack mediaStreamTrack,
     bool enable,
-  ) {
-    WebRTC.invokeMethod(
+  ) async {
+    await WebRTC.invokeMethod(
       'enableSharpening',
       <String, dynamic>{'trackId': mediaStreamTrack.id, 'enable': enable},
     );
@@ -381,11 +381,11 @@ class Helper {
   ///
   /// - [mediaStreamTrack]: Target media track
   /// - [strength]: New sharpening strength (0.0 - 1.0)
-  static void setEffectsSdkSharpeningStrength(
+  static Future<void> setEffectsSdkSharpeningStrength(
     MediaStreamTrack mediaStreamTrack,
     double strength,
-  ) {
-    WebRTC.invokeMethod(
+  ) async {
+    await WebRTC.invokeMethod(
       'setSharpeningStrength',
       <String, dynamic>{'trackId': mediaStreamTrack.id, 'strength': strength},
     );
@@ -395,11 +395,11 @@ class Helper {
   ///
   /// - [mediaStreamTrack]: Target media track
   /// - [colorCorrectionMode]: New color processing mode
-  static void setEffectsSdkColorCorrectionMode(
+  static Future<void> setEffectsSdkColorCorrectionMode(
     MediaStreamTrack mediaStreamTrack,
     ColorCorrectionMode colorCorrectionMode,
-  ) {
-    WebRTC.invokeMethod(
+  ) async {
+    await WebRTC.invokeMethod(
       'setColorCorrectionMode',
       <String, dynamic>{
         'trackId': mediaStreamTrack.id,
@@ -412,11 +412,11 @@ class Helper {
   ///
   /// - [mediaStreamTrack]: Target media track
   /// - [strength]: Filter intensity (0.0 - 1.0)
-  static void setEffectsSdkColorFilterStrength(
+  static Future<void> setEffectsSdkColorFilterStrength(
     MediaStreamTrack mediaStreamTrack,
     double strength,
-  ) {
-    WebRTC.invokeMethod(
+  ) async {
+    await WebRTC.invokeMethod(
       'setColorFilterStrength',
       <String, dynamic>{'trackId': mediaStreamTrack.id, 'strength': strength},
     );
@@ -426,11 +426,11 @@ class Helper {
   ///
   /// - [mediaStreamTrack]: Target media track
   /// - [image]: Reference image for color matching
-  static void setEffectsSdkColorGradingReferenceImage(
+  static Future<void> setEffectsSdkColorGradingReferenceImage(
     MediaStreamTrack mediaStreamTrack,
     EffectsSdkImage image,
-  ) {
-    WebRTC.invokeMethod(
+  ) async {
+    await WebRTC.invokeMethod(
       'setColorGradingReferenceImage',
       <String, dynamic>{
         'trackId': mediaStreamTrack.id,
