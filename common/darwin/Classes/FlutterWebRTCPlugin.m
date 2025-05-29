@@ -2397,6 +2397,20 @@ bypassVoiceProcessing:(BOOL)bypassVoiceProcessing {
 		[self handleLocalAuthCall:call result:result];
 		return true;
 	}
+	if ([@"getPipelineMode" isEqualToString:call.method]) {
+		NSString* trackId = call.arguments[@"trackId"];
+		LocalVideoTrack* track =
+			[self getLocalVideoTrackForEffectsSDKWithId:trackId method:call.method result:result];
+		if (nil == track) {
+			return true;
+		}
+		if (nil == track.sdkPipelineController) {
+			result(@"NO_EFFECTS");
+			return true;
+		}
+		result([track.sdkPipelineController getPipelineMode]);
+		return true;
+	}
 	if ([@"setPipelineMode" isEqualToString:call.method]) {
 		NSString* trackId = call.arguments[@"trackId"];
 		NSString* pipelineMode = call.arguments[@"pipelineMode"];
@@ -2424,6 +2438,7 @@ bypassVoiceProcessing:(BOOL)bypassVoiceProcessing {
 		
 		[self ensureSDKControllerOfTrack:track];
 		[track.sdkPipelineController setBlurPower:power];
+		result(nil);
 		return true;
 	}
 	if ([@"setBackgroundImage" isEqualToString:call.method]) {
@@ -2456,6 +2471,7 @@ bypassVoiceProcessing:(BOOL)bypassVoiceProcessing {
 			return true;
 		}
 		if (!enable && (nil == track.sdkPipelineController)) {
+			result(nil);
 			return true;
 		}
 		[self ensureSDKControllerOfTrack:track];

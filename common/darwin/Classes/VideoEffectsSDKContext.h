@@ -34,6 +34,7 @@ NSString* _Nonnull nameOfAuthStatus(TSVBAuthStatus status);
 
 -(nonnull instancetype)initWithSDKFactory:(nonnull TSVBSDKFactory*)factory frameFactory:(nonnull id<TSVBFrameFactory>)frameFactory adapter:(nonnull VideoProcessingAdapter*)adapter;
 
+-(nonnull NSString*)getPipelineMode;
 -(nullable FlutterError*)setPipelineMode:(nonnull NSString*)mode;
 -(nullable FlutterError*)setBeautificationEnabled:(bool)enabled;
 -(nullable FlutterError*)setZoomLevel:(float)level;

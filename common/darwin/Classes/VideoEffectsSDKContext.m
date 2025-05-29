@@ -189,6 +189,20 @@ static ColorFilterMode mapColorFilterName(NSString* mode) {
 	return self;
 }
 
+-(nonnull NSString*)getPipelineMode
+{
+	if (_blurEnabled) {
+		return @"BLUR";
+	}
+	if (_replaceEnabled) {
+		return @"REPLACE";
+	}
+	if (_removeEnabled) {
+		return @"REMOVE";
+	}
+	return @"NO_EFFECTS";
+}
+
 - (nullable FlutterError*)setPipelineMode:(nonnull NSString*)mode {
 	if ([@"PipelineMode.noEffects" isEqualToString:mode] && (nil == _wrapper)) {
 		return nil;
