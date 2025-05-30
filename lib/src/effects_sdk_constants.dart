@@ -18,9 +18,6 @@ enum AuthStatus {
 
 /// Video background processing modes
 enum PipelineMode {
-  /// Remove background completely
-  remove,
-
   /// Replace background with custom image/video
   replace,
 
@@ -41,9 +38,6 @@ enum ColorCorrectionMode {
 
   /// Manual color grading controls
   colorGradingMode,
-
-  /// Apply predefined color presets
-  presetMode,
 
   /// Low light environment optimization
   lowLightMode,
@@ -73,7 +67,6 @@ AuthStatus parseJavaAuthStatus(String javaEnumValue) {
 /// Converts Java Platform enum string to [PipelineMode] value.
 ///
 /// Supported values:
-/// - 'REMOVE' → [PipelineMode.remove]
 /// - 'REPLACE' → [PipelineMode.replace]
 /// - 'BLUR' → [PipelineMode.blur]
 /// - 'NO_EFFECTS' → [PipelineMode.noEffects]
@@ -81,7 +74,6 @@ AuthStatus parseJavaAuthStatus(String javaEnumValue) {
 /// Throws [Exception] if unknown value is passed.
 PipelineMode parseJavaPipelineMode(String javaEnumValue) {
   switch (javaEnumValue) {
-    case 'REMOVE': return PipelineMode.remove;
     case 'REPLACE': return PipelineMode.replace;
     case 'BLUR': return PipelineMode.blur;
     case 'NO_EFFECTS': return PipelineMode.noEffects;
@@ -104,7 +96,6 @@ ColorCorrectionMode parseJavaColorCorrectionMode(String javaEnumValue) {
     case 'NO_FILTER_MODE': return ColorCorrectionMode.noFilterMode;
     case 'COLOR_CORRECTION_MODE': return ColorCorrectionMode.colorCorrectionMode;
     case 'COLOR_GRADING_MODE': return ColorCorrectionMode.colorGradingMode;
-    case 'PRESET_MODE': return ColorCorrectionMode.presetMode;
     case 'LOW_LIGHT_MODE': return ColorCorrectionMode.lowLightMode;
     default: throw Exception('Unknown enum value: $javaEnumValue');
   }
