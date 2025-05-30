@@ -18,7 +18,7 @@ enum AuthStatus {
 
 /// Video background processing modes
 enum PipelineMode {
-  /// Replace background with custom image/video
+  /// Replace background with custom image
   replace,
 
   /// Apply background blur effect
@@ -33,18 +33,21 @@ enum ColorCorrectionMode {
   /// No color adjustments applied
   noFilterMode,
 
-  /// Automatic color correction and white balance
+  /// Automatic color correction using Machine Learning
   colorCorrectionMode,
 
-  /// Manual color grading controls
+  /// Generates a color palette from the reference image and apply it to the video.
   colorGradingMode,
 
   /// Low light environment optimization
+  /// 
+  /// Makes the video brighter using machine learning, can improve videos shot in a dark room.
   lowLightMode,
 }
 
 /// Converts Java Platform enum string to [AuthStatus] value.
 ///
+/// @nodoc
 /// Supported values:
 /// - 'ACTIVE' → [AuthStatus.active]
 /// - 'INACTIVE' → [AuthStatus.inactive]
@@ -66,6 +69,7 @@ AuthStatus parseJavaAuthStatus(String javaEnumValue) {
 
 /// Converts Java Platform enum string to [PipelineMode] value.
 ///
+/// @nodoc
 /// Supported values:
 /// - 'REPLACE' → [PipelineMode.replace]
 /// - 'BLUR' → [PipelineMode.blur]
@@ -83,11 +87,11 @@ PipelineMode parseJavaPipelineMode(String javaEnumValue) {
 
 /// Converts Java Platform enum string to [ColorCorrectionMode] value.
 ///
+/// @nodoc
 /// Supported values:
 /// - 'NO_FILTER_MODE' → [ColorCorrectionMode.noFilterMode]
 /// - 'COLOR_CORRECTION_MODE' → [ColorCorrectionMode.colorCorrectionMode]
 /// - 'COLOR_GRADING_MODE' → [ColorCorrectionMode.colorGradingMode]
-/// - 'PRESET_MODE' → [ColorCorrectionMode.presetMode]
 /// - 'LOW_LIGHT_MODE' → [ColorCorrectionMode.lowLightMode]
 ///
 /// Throws [Exception] if unknown value is passed.

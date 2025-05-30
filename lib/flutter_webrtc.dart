@@ -5,6 +5,7 @@ export 'package:webrtc_interface/webrtc_interface.dart'
 
 export 'src/effects_sdk_constants.dart';
 export 'src/effects_sdk_image.dart' show EffectsSdkImage, RawImageFormat;
+export 'src/effects_sdk.dart';
 export 'src/helper.dart';
 export 'src/desktop_capturer.dart';
 export 'src/media_devices.dart';

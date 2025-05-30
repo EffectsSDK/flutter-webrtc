@@ -76,11 +76,11 @@ class _GetUserMediaSampleState extends State<GetUserMediaSample> {
       _mediaDevicesList = await navigator.mediaDevices.enumerateDevices();
       _localStream = stream;
       _localRenderer.srcObject = _localStream;
-      var status = await Helper.auth(stream.getVideoTracks().first, 'YOUR_CUSTOMER_ID');
+      var status = await VideoEffectsSdk.auth(stream.getVideoTracks().first, 'YOUR_CUSTOMER_ID');
       switch (status) {
         case AuthStatus.active:
-          Helper.setEffectsSdkPipelineMode(stream.getVideoTracks().first, PipelineMode.blur);
-          Helper.setEffectsSdkBlurPower(stream.getVideoTracks().first, 0.6);
+          await VideoEffectsSdk.setPipelineMode(stream.getVideoTracks().first, PipelineMode.blur);
+          await VideoEffectsSdk.setBlurPower(stream.getVideoTracks().first, 0.6);
         case AuthStatus.expired:
           // TODO: Handle this case.
         case AuthStatus.inactive:

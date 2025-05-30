@@ -97,9 +97,6 @@ class SolidRGBImage extends ImageSource {
 
 /// Container for image data used by the effects SDK.
 class EffectsSdkImage {
-  /// The source of the image data.
-  final ImageSource source;
-
   /// Creates image from raw pixel data.
   ///
   /// - [data]: Raw pixel bytes in specified format
@@ -143,4 +140,7 @@ class EffectsSdkImage {
     required double g,
     required double b,
   }) : source = SolidRGBImage(r: r, g: g, b: b);
+
+  /// The source of the image data. Private, do not use it directly.
+  final ImageSource source;
 }
