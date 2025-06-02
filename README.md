@@ -39,14 +39,14 @@ final mediaConstraints = <String, dynamic>{
 var stream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
 ```
 
-2. Call EffectsSDK methods by using WebRTC Helper
+2. Call EffectsSDK methods by using VideoEffectsSdk
 
 ```dart
-var status = await Helper.auth(stream.getVideoTracks().first, 'YOUR_CUSTOMER_ID');
+var status = await VideoEffectsSdk.auth(stream.getVideoTracks().first, 'YOUR_CUSTOMER_ID');
 switch (status) {
     case AuthStatus.active:
-    await Helper.setEffectsSdkPipelineMode(stream.getVideoTracks().first, PipelineMode.blur);
-    await Helper.setEffectsSdkBlurPower(stream.getVideoTracks().first, 0.6);
+    await VideoEffectsSdk.setPipelineMode(stream.getVideoTracks().first, PipelineMode.blur);
+    await VideoEffectsSdk.setBlurPower(stream.getVideoTracks().first, 0.6);
     case AuthStatus.expired:
     // TODO: Handle this case.
     case AuthStatus.inactive:
@@ -58,48 +58,8 @@ switch (status) {
 
 ## Effects SDK API
 
-### Effects SDK Image
-
-class EffectsSdkImage.
-
-Can be created from:
-
-1. raw data
-2. file
-3. encoded data
-4. rgb color
-
-### Color correction options
-
-4 different modes are supported:
-
-1. Color correction - Enhances colors using machine learning.
-2. Color grading - Adjusts colors using reference image color scheme.
-3. Low light - Makes the video brighter using machine learning, helps for video with dark environment.
-
-
-### Helper methods
-
-| Name                                    | Summary                                                                                                   |
-|-----------------------------------------|-----------------------------------------------------------------------------------------------------------|
-| auth                                    | Future<rtc.AuthStatus> auth(String customerId, {String? apiUrl})<br/>Auth sdk by using customer ID        |
-| localAuth                               | Future<rtc.AuthStatus> localAuth(String localKey)<br/>Auth SDK by using local key                         |
-| getEffectsSdkPipelineMode               | Future<rtc.PipelineMode> getPipelineMode()<br/>Return current background processing mode                  |
-| setEffectsSdkPipelineMode               | void setPipelineMode(rtc.PipelineMode mode)<br/>Set background processing mode                            |
-| setEffectsSdkBlurPower                  | void setBlurPower(double blurPower)<br/>Set blur power                                                    |
-| setEffectsSdkBackgroundImage            | void setBackgroundImage(rtc.EffectsSdkImage data)<br/>Set background image                                |
-| enableEffectsSdkBeautification          | void enableBeautification(bool enable)<br/>Enable beautification feature                                  |
-| isEffectsSdkBeautificationEnabled       | Future<bool> isBeautificationEnabled()<br/>Return true if beautification enabled                          |
-| setEffectsSdkBeautificationPower        | void setBeautificationPower(double power)<br/>Set beautification power                                    |
-| getEffectsSdkZoomLevel                  | Future<double> getZoomLevel()<br/>Get current zoom level                                                  |
-| setEffectsSdkZoomLevel                  | void setZoomLevel(double zoomLevel)<br/>Set zoom level                                                    |
-| enableEffectsSdkSharpening              | void enableSharpening(bool enable)<br/>Enable sharpening mode                                             |
-| getEffectsSdkSharpeningStrength         | Future<double> getSharpeningStrength()<br/>Return current sharpening power                                |
-| setEffectsSdkSharpeningStrength         | void setSharpeningStrength(double strength)<br/>Set sharpening power                                      |
-| setEffectsSdkColorCorrectionMode        | void setColorCorrectionMode(rtc.ColorCorrectionMode colorCorrectionMode)<br/>Set color correction mode    |
-| setEffectsSdkColorFilterStrength        | void setColorFilterStrength(double strength)<br/>Set color filter strength                                |
-| setEffectsSdkColorGradingReferenceImage | void setColorGradingReferenceImage(rtc.EffectsSdkImage data)<br/>Set reference image for color correction |
-
+Read about Effects SDK API you can on the  
+[Effects SDK integration API Reference](https://effectssdk.ai/sdk/flutter-webrtc/)
 
 ## Technical details
 
