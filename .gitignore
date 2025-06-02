@@ -12,7 +12,7 @@ example/android/local.properties
 .dart_tool/package_config.json
 android/.project
 android/libs/*
-!android/libs/readme.txt
+!android/libs/Effects_SDK_v.2.11.4.aar
 example/ios/Runner/GeneratedPluginRegistrant.m
 example/ios/Runner/GeneratedPluginRegistrant.h
 example/ios/Flutter/Generated.xcconfig
