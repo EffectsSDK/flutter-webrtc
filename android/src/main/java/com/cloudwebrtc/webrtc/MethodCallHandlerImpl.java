@@ -51,6 +51,8 @@ import org.webrtc.DtmfSender;
 import org.webrtc.EglBase;
 import org.webrtc.IceCandidate;
 import org.webrtc.Logging;
+import org.webrtc.Logging.Severity;
+import org.webrtc.Loggable;
 import org.webrtc.MediaConstraints;
 import org.webrtc.MediaConstraints.KeyValuePair;
 import org.webrtc.MediaStream;
@@ -134,6 +136,18 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
 
   public AudioProcessingController audioProcessingController;
 
+  public static class LogSink implements Loggable {
+    @Override
+    public void onLogMessage(String message, Severity sev, String tag) {
+      ConstraintsMap params = new ConstraintsMap();
+      params.putString("event", "onLogData");
+      params.putString("data", message);
+      FlutterWebRTCPlugin.sharedSingleton.sendEvent(params.toMap());
+    }
+  }
+
+  public static LogSink logSink = new LogSink();
+
   MethodCallHandlerImpl(Context context, BinaryMessenger messenger, TextureRegistry textureRegistry) {
     this.context = context;
     this.textures = textureRegistry;
@@ -162,7 +176,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
     mPeerConnectionObservers.clear();
   }
   private void initialize(boolean bypassVoiceProcessing, int networkIgnoreMask, boolean forceSWCodec, List<String> forceSWCodecList,
-  @Nullable ConstraintsMap androidAudioConfiguration) {
+  @Nullable ConstraintsMap androidAudioConfiguration, Severity logSeverity) {
     if (mFactory != null) {
       return;
     }
@@ -170,6 +184,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
     PeerConnectionFactory.initialize(
             InitializationOptions.builder(context)
                     .setEnableInternalTracer(true)
+                    .setInjectableLogger(logSink, logSeverity)
                     .createInitializationOptions());
 
     getUserMediaImpl = new GetUserMediaImpl(this, context);
@@ -343,7 +358,15 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
         if(options.get("bypassVoiceProcessing") != null) {
           enableBypassVoiceProcessing = (boolean)options.get("bypassVoiceProcessing");
         }
-        initialize(enableBypassVoiceProcessing, networkIgnoreMask, forceSWCodec, forceSWCodecList, androidAudioConfiguration);
+
+        Severity logSeverity = Severity.LS_NONE;
+        if (constraintsMap.hasKey("logSeverity")
+                && constraintsMap.getType("logSeverity") == ObjectType.String) {
+          String logSeverityStr = constraintsMap.getString("logSeverity");
+          logSeverity = str2LogSeverity(logSeverityStr);
+        }
+
+        initialize(enableBypassVoiceProcessing, networkIgnoreMask, forceSWCodec, forceSWCodecList, androidAudioConfiguration, logSeverity);
         result.success(null);
         break;
       }
@@ -772,8 +795,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
       case "stopRecordToFile":
         Integer recorderId = call.argument("recorderId");
         String albumName = call.argument("albumName");
-        getUserMediaImpl.stopRecording(recorderId, albumName);
-        result.success(null);
+        getUserMediaImpl.stopRecording(recorderId, albumName, () -> result.success(null));
         break;
       case "captureFrame": {
         String path = call.argument("path");
@@ -1016,6 +1038,11 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
         }
         break;
       }
+      case "setLogSeverity": {
+        //now it's possible to setup logSeverity only via PeerConnectionFactory.initialize method
+        //Log.d(TAG, "no implementation for 'setLogSeverity'");
+        break;
+      }  
       case "getPipelineMode": {
         String trackId = call.argument("trackId");
         break;
@@ -2240,6 +2267,22 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
       if (renderer.checkVideoTrack(trackId, "local")) {
         renderer.setStream(null, null);
       }
+    }
+  }
+
+  private Severity str2LogSeverity(String severity) {
+    switch (severity) {
+      case "verbose":
+        return Severity.LS_VERBOSE;
+      case "info":
+        return Severity.LS_INFO;
+      case "warning":
+        return Severity.LS_WARNING;
+      case "error":
+        return Severity.LS_ERROR;
+      case "none":
+      default:
+        return Severity.LS_NONE;
     }
   }
 

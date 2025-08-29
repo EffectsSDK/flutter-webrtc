@@ -2,6 +2,13 @@ cmake_minimum_required(VERSION 3.15)
 set(PROJECT_NAME "flutter_webrtc")
 project(${PROJECT_NAME} LANGUAGES CXX)
 
+if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
+  cmake_policy(SET CMP0135 NEW)
+endif()
+
+# Add the libwebrtc dependency
+include("${CMAKE_CURRENT_SOURCE_DIR}/../third_party/CMakeLists.txt")
+
 # This value is used when generating builds using this plugin, so it must
 # not be changed
 set(PLUGIN_NAME "flutter_webrtc_plugin")
@@ -20,7 +27,6 @@ add_library(${PLUGIN_NAME} SHARED
   "../common/cpp/src/flutter_screen_capture.cc"
   "../common/cpp/src/flutter_webrtc.cc"
   "../common/cpp/src/flutter_webrtc_base.cc"
-  "../third_party/uuidxx/uuidxx.cc"
   "flutter_webrtc_plugin.cc"
   "task_runner_windows.cc"
 )
@@ -28,7 +34,6 @@ add_library(${PLUGIN_NAME} SHARED
 include_directories(
   "${CMAKE_CURRENT_SOURCE_DIR}"
   "${CMAKE_CURRENT_SOURCE_DIR}/../common/cpp/include"
-  "${CMAKE_CURRENT_SOURCE_DIR}/../third_party/uuidxx"
   "${CMAKE_CURRENT_SOURCE_DIR}/../third_party/svpng"
   "${CMAKE_CURRENT_SOURCE_DIR}/../third_party/libwebrtc/include"
 )
@@ -39,6 +44,8 @@ set_target_properties(${PLUGIN_NAME} PROPERTIES
 target_compile_definitions(${PLUGIN_NAME} PRIVATE FLUTTER_PLUGIN_IMPL)
 target_include_directories(${PLUGIN_NAME} INTERFACE
   "${CMAKE_CURRENT_SOURCE_DIR}"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../common/cpp/include"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../third_party/libwebrtc/include"
 )
 target_link_libraries(${PLUGIN_NAME} PRIVATE 
   flutter
