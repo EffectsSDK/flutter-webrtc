@@ -59,6 +59,13 @@ class FilePathImage extends ImageSource {
   final String path;
 }
 
+/// Image loaded from URL.
+class UrlImage extends ImageSource {
+  UrlImage(this.url);
+
+  final String url;
+}
+
 /// Encoded image data (e.g. PNG/JPEG).
 class EncodedImageData extends ImageSource {
   /// Creates an image from encoded bytes.
@@ -140,6 +147,9 @@ class EffectsSdkImage {
     required double g,
     required double b,
   }) : source = SolidRGBImage(r: r, g: g, b: b);
+
+  /// Creates Image that will be loaded from URL. (Currently only for the web platform)
+  EffectsSdkImage.fromURL(String url) : source = UrlImage(url);
 
   /// The source of the image data. Private, do not use it directly.
   final ImageSource source;

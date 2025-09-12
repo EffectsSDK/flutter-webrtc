@@ -1,32 +1,143 @@
-import 'package:flutter/foundation.dart';
-import 'package:flutter_webrtc/src/effects_sdk_image.dart';
-
 import '../flutter_webrtc.dart';
+import 'effects_sdk_base.dart';
+
+import 'video_effects_sdk_stub.dart' 
+  if (dart.library.js_interop) 'web/video_effects_sdk_impl.dart'
+  if (dart.library.io) 'native/video_effects_sdk_impl.dart';
+
+enum WebInferenceProvider {
+  wasm,
+  webgpu,
+  auto
+}
+
+enum VideoEffect {
+  virtual_background,
+  smart_zoom, 
+  low_light, 
+  color_correction
+}
+
+enum SegmentationPreset {
+  lightning, 
+  speed,
+  balanced,
+  quality
+}
+
+/// Video Effects SDK configuration.
+/// 
+/// Currently applicable only for web.
+class VideoEffectSDKConfig {
+  VideoEffectSDKConfig({
+    this.apiUrl,
+    this.sdkUrl,
+    this.modelUrl,
+    this.preset,
+    this.webInferenceProvider,
+    this.effects,
+    this.cacheModels,
+    this.testInference,
+    this.proxy,
+    this.stats,
+    this.models,
+    this.wasmPaths,
+  });
+
+  /// Custom url for sdk authentication, applicable for on-premises solutions.
+  String? apiUrl;
+
+  // Web only
+
+  /// Specifies the url to SDK folder in case when you host model files by yourself (Web only).
+  String? sdkUrl;
+  
+  /// Specifies custom URL for the segmentation model; in most cases, this parameter does not require configuration.
+  String? modelUrl;
+
+  /// Specifies background segmentation preset (Currently Web Only)
+  /// 
+  /// [SegmentationPreset.balanced] by default.
+  SegmentationPreset? preset;
+
+  /// Specifies backend for ML inference. (Web only).
+  /// 
+  /// [WebInferenceProvider.auto] by default.
+  WebInferenceProvider? webInferenceProvider;
+  
+  /// List of effects which should be loaded at initialization. (Web only)
+  List<VideoEffect>? effects;
+
+  /// Specifies to cache models locally, this will speed up the load time. (Web only)
+  ///
+  /// true by default.
+  bool? cacheModels;
+
+  /// If set to true, the SDK will test inference consistency on the WebGPU backend.
+  /// 
+  /// false by default.
+  bool? testInference;
+
+  /// Configuration specifies if segmentation should be working in separate worker thread (not in main UI thread), default value is true. (Web only)
+  bool? proxy;
+
+  /// Enabling/disabling statistics sending. (Web only).
+  bool? stats;
+
+  /// Ability to provide a custom path of model (Web only).
+  ///
+  /// ````
+  /// final modelPaths = {
+  ///   'colorcorrector': 'path',
+  ///   'facedetector': 'path',
+  ///   'lowlighter': 'path'
+  /// };
+  /// ````
+  Map<String, String>? models;
+
+  /// Currently wasm files are loading from the same directory where SDK is placed, but custom urls also supported (for example you can load it from CDNs) (Web only).
+  /// 
+  /// ````
+  /// final paths = {
+  ///   'ort-wasm.wasm': 'url',
+  ///   'ort-wasm-simd.wasm': 'url',
+  ///   'ort-wasm-threaded.wasm': 'url',
+  ///   'ort-wasm-simd-threaded.wasm': 'url'
+  /// };
+  /// ````
+  Map<String, String>? wasmPaths;
+}
 
 /// Video Effects SDK API class.
 /// 
 /// Video Effects SDK can only work with local video tracks.
 class VideoEffectsSdk {
-  /// Authenticates SDK using remote service.
+  /// Initializes Video Effects SDK for the web.
+  ///
+  /// Should be called before the first local camera stream created.
+  /// For native platforms do nothing.
+  /// - [customerID]: Unique customerID for authentication
+  /// - [preload]: Start preloading models if true. 
+  /// - [config]: Optional Web SDK configuration.
+  static void initialize(String customerID, {bool preload = false, VideoEffectSDKConfig? config}) {
+    _impl.initialize(customerID, preload: preload, config: config);
+  }
+
+  /// Authenticates SDK using remote service (Optional for the web).
   ///
   /// Method performs https request to obtain license for customerID.
+  /// Optional if web platform 
   /// - [mediaStreamTrack]: Associated media track
   /// - [customerID]: Unique customerID for authentication
   /// - [apiUrl]: Optional custom authentication endpoint
   /// - Returns: [AuthStatus] indicating authentication result
   /// - Throws: Platform exceptions for communication errors
   static Future<AuthStatus> auth(
-      MediaStreamTrack mediaStreamTrack, String customerID,
-      {String? apiUrl}) async {
-    String status = await WebRTC.invokeMethod(
-      'auth',
-      <String, dynamic>{
-        'trackId': mediaStreamTrack.id,
-        'customerKey': customerID,
-        'apiUrl': apiUrl
-      },
-    );
-    return parseJavaAuthStatus(status);
+    MediaStreamTrack track,
+    String customerID,
+    {String? apiUrl}
+  ) {
+    return _impl.auth(track, customerID, apiUrl: apiUrl);
   }
 
   /// Offline authorization with a secret key.
@@ -39,12 +150,26 @@ class VideoEffectsSdk {
   static Future<AuthStatus> localAuth(
     MediaStreamTrack mediaStreamTrack,
     String localKey
-  ) async {
-    String status = await WebRTC.invokeMethod(
-      'localAuth',
-      <String, dynamic>{'trackId': mediaStreamTrack.id, 'localKey': localKey},
-    );
-    return parseJavaAuthStatus(status);
+  ) {
+    return _impl.localAuth(mediaStreamTrack, localKey);
+  }
+
+  /// Wraps stream to attack the SDK (For web only). 
+  /// 
+  /// Behavior different between platforms:
+  /// * On web platform returns new stream with the sdk plugged in.
+  /// * On native platforms returns the same stream. (does nothing with it).
+  /// 
+  /// The caller is responsible for disposing of both the original stream and the created stream.
+  static Future<MediaStream> wrapStream(MediaStream stream) {
+    return _impl.wrapStream(stream);
+  }
+
+  /// Returns original stream it was crated from.
+  /// 
+  /// This method can be used to get original stream to dispose it.
+  static Future<MediaStream?> getWrappedStream(MediaStream stream) {
+    return _impl.getWrappedStream(stream);
   }
 
   /// Gets the current background processing mode for a media track.
@@ -52,13 +177,8 @@ class VideoEffectsSdk {
   /// - [mediaStreamTrack]: The target media track
   /// - Returns: Current [PipelineMode]
   /// - Throws: [Exception] if native method fails or returns unknown value
-  static Future<PipelineMode> getPipelineMode(
-      MediaStreamTrack mediaStreamTrack) async {
-    String mode = await WebRTC.invokeMethod(
-      'getPipelineMode',
-      <String, dynamic>{'trackId': mediaStreamTrack.id},
-    );
-    return parseJavaPipelineMode(mode);
+  static Future<PipelineMode> getPipelineMode(MediaStreamTrack mediaStreamTrack) {
+    return _impl.getPipelineMode(mediaStreamTrack);
   }
 
   /// Sets background processing mode for a media track.
@@ -66,14 +186,8 @@ class VideoEffectsSdk {
   /// - [mediaStreamTrack]: Target media track
   /// - [pipelineMode]: New processing mode to apply
   static Future<void> setPipelineMode(
-      MediaStreamTrack mediaStreamTrack, PipelineMode pipelineMode) async {
-    await WebRTC.invokeMethod(
-      'setPipelineMode',
-      <String, dynamic>{
-        'trackId': mediaStreamTrack.id,
-        'pipelineMode': pipelineMode.toString()
-      },
-    );
+      MediaStreamTrack mediaStreamTrack, PipelineMode pipelineMode) {
+    return _impl.setPipelineMode(mediaStreamTrack, pipelineMode);
   }
 
   /// Adjusts blur strength for background blur mode.
@@ -81,12 +195,10 @@ class VideoEffectsSdk {
   /// - [mediaStreamTrack]: Target media track
   /// - [power]: Blur strength (0.0 - 1.0 where 1.0 is maximum blur)
   static Future<void> setBlurPower(
-      MediaStreamTrack mediaStreamTrack,
-      double power) async {
-    await WebRTC.invokeMethod(
-      'setBlurPower',
-      <String, dynamic>{'trackId': mediaStreamTrack.id, 'blurPower': power},
-    );
+    MediaStreamTrack mediaStreamTrack,
+    double power
+  ) {
+    return _impl.setBlurPower(mediaStreamTrack, power);
   }
 
   /// Sets custom background image for replace mode.
@@ -97,14 +209,8 @@ class VideoEffectsSdk {
   static Future<void> setBackgroundImage(
     MediaStreamTrack mediaStreamTrack,
     EffectsSdkImage image,
-  ) async {
-    await WebRTC.invokeMethod(
-      'setBackgroundImage',
-      <String, dynamic>{
-        'trackId': mediaStreamTrack.id,
-        'image': _serializeImage(image)
-      },
-    );
+  ) {
+    return _impl.setBackgroundImage(mediaStreamTrack, image);
   }
 
   /// Enables/disables face beautification effects.
@@ -115,11 +221,8 @@ class VideoEffectsSdk {
   static Future<void> enableBeautification(
     MediaStreamTrack mediaStreamTrack,
     bool enable,
-  ) async {
-    await WebRTC.invokeMethod(
-      'enableBeautification',
-      <String, dynamic>{'trackId': mediaStreamTrack.id, 'enable': enable},
-    );
+  ) {
+    return _impl.enableBeautification(mediaStreamTrack, enable);
   }
 
   /// Checks if beautification is currently enabled.
@@ -127,11 +230,8 @@ class VideoEffectsSdk {
   /// - [mediaStreamTrack]: Target media track
   /// - Returns: Current enabled status
   static Future<bool> isBeautificationEnabled(
-      MediaStreamTrack mediaStreamTrack) async {
-    return await WebRTC.invokeMethod(
-      'isBeautificationEnabled',
-      <String, dynamic>{'trackId': mediaStreamTrack.id},
-    );
+      MediaStreamTrack mediaStreamTrack) {
+    return _impl.isBeautificationEnabled(mediaStreamTrack);
   }
 
   /// Adjusts beautification effect strength.
@@ -141,14 +241,8 @@ class VideoEffectsSdk {
   static Future<void> setBeautificationPower(
     MediaStreamTrack mediaStreamTrack,
     double power,
-  ) async {
-    await WebRTC.invokeMethod(
-      'setBeautificationPower',
-      <String, dynamic>{
-        'trackId': mediaStreamTrack.id,
-        'beautificationPower': power
-      },
-    );
+  ) {
+    return _impl.setBeautificationPower(mediaStreamTrack, power);
   }
 
   /// Gets current smart zoom level.
@@ -156,11 +250,8 @@ class VideoEffectsSdk {
   /// - [mediaStreamTrack]: Target media track
   /// - Returns: Current zoom level 
   static Future<double> getZoomLevel(
-      MediaStreamTrack mediaStreamTrack) async {
-    return await WebRTC.invokeMethod(
-      'getZoomLevel',
-      <String, dynamic>{'trackId': mediaStreamTrack.id},
-    );
+      MediaStreamTrack mediaStreamTrack) {
+    return _impl.getZoomLevel(mediaStreamTrack);
   }
 
   /// Sets smart zoom level.
@@ -171,11 +262,8 @@ class VideoEffectsSdk {
   static Future<void> setZoomLevel(
     MediaStreamTrack mediaStreamTrack,
     double zoomLevel,
-  ) async {
-    await WebRTC.invokeMethod(
-      'setZoomLevel',
-      <String, dynamic>{'trackId': mediaStreamTrack.id, 'zoomLevel': zoomLevel},
-    );
+  ) {
+    return _impl.setZoomLevel(mediaStreamTrack, zoomLevel);
   }
 
   /// Enables/disables image sharpening.
@@ -185,11 +273,8 @@ class VideoEffectsSdk {
   static Future<void> enableSharpening(
     MediaStreamTrack mediaStreamTrack,
     bool enable,
-  ) async {
-    await WebRTC.invokeMethod(
-      'enableSharpening',
-      <String, dynamic>{'trackId': mediaStreamTrack.id, 'enable': enable},
-    );
+  ){
+    return _impl.enableSharpening(mediaStreamTrack, enable);
   }
 
   /// Gets current sharpening strength.
@@ -197,11 +282,8 @@ class VideoEffectsSdk {
   /// - [mediaStreamTrack]: Target media track
   /// - Returns: Current sharpening strength (0.0 - 1.0)
   static Future<double> getSharpeningStrength(
-      MediaStreamTrack mediaStreamTrack) async {
-    return await WebRTC.invokeMethod(
-      'getSharpeningStrength',
-      <String, dynamic>{'trackId': mediaStreamTrack.id},
-    );
+      MediaStreamTrack mediaStreamTrack) {
+    return _impl.getSharpeningStrength(mediaStreamTrack);
   }
 
   /// Adjusts image sharpening strength.
@@ -211,11 +293,8 @@ class VideoEffectsSdk {
   static Future<void> setSharpeningStrength(
     MediaStreamTrack mediaStreamTrack,
     double strength,
-  ) async {
-    await WebRTC.invokeMethod(
-      'setSharpeningStrength',
-      <String, dynamic>{'trackId': mediaStreamTrack.id, 'strength': strength},
-    );
+  ) {
+    return _impl.setSharpeningStrength(mediaStreamTrack, strength);
   }
 
   /// Sets color correction processing mode.
@@ -225,14 +304,8 @@ class VideoEffectsSdk {
   static Future<void> setColorCorrectionMode(
     MediaStreamTrack mediaStreamTrack,
     ColorCorrectionMode colorCorrectionMode,
-  ) async {
-    await WebRTC.invokeMethod(
-      'setColorCorrectionMode',
-      <String, dynamic>{
-        'trackId': mediaStreamTrack.id,
-        'colorCorrectionMode': colorCorrectionMode.toString()
-      },
-    );
+  ) {
+    return _impl.setColorCorrectionMode(mediaStreamTrack, colorCorrectionMode);
   }
 
   /// Adjusts color filter strength.
@@ -242,11 +315,8 @@ class VideoEffectsSdk {
   static Future<void> setColorFilterStrength(
     MediaStreamTrack mediaStreamTrack,
     double strength,
-  ) async {
-    await WebRTC.invokeMethod(
-      'setColorFilterStrength',
-      <String, dynamic>{'trackId': mediaStreamTrack.id, 'strength': strength},
-    );
+  ) {
+    return _impl.setColorFilterStrength(mediaStreamTrack, strength);
   }
 
   /// Sets reference image for color grading mode.
@@ -256,34 +326,10 @@ class VideoEffectsSdk {
   static Future<void> setColorGradingReference(
     MediaStreamTrack mediaStreamTrack,
     EffectsSdkImage image,
-  ) async {
-    await WebRTC.invokeMethod(
-      'setColorGradingReferenceImage',
-      <String, dynamic>{
-        'trackId': mediaStreamTrack.id,
-        'reference': _serializeImage(image)
-      },
-    );
+  )
+  {
+    return _impl.setColorGradingReference(mediaStreamTrack, image);
   }
 
-  /// Serializes [EffectsSdkImage] to platform-specific format.
-  static Map<String, dynamic> _serializeImage(EffectsSdkImage image) {
-    switch (image.source) {
-      case FilePathImage s:
-        return <String, dynamic>{"type": "filepath", "path": s.path};
-      case EncodedImageData s:
-        return <String, dynamic>{"type": "encoded", "data": s.data};
-      case SolidRGBImage(r: final r, g: final g, b: final b):
-        return <String, dynamic>{"type": "rgb", "r": r, "g": g, "b": b};
-      case RawImage s:
-        return <String, dynamic>{
-          "type": "raw",
-          "data": s.data,
-          "format": s.format.name,
-          "width": s.width,
-          "height": s.height,
-          "stride": s.bytesPerRow
-        };
-    }
-  }
+  static final VideoEffectsSdkBase _impl = VideoEffectsSdkImpl();
 }
