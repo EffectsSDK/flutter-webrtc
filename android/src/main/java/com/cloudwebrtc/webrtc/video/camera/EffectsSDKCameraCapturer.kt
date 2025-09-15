@@ -132,6 +132,7 @@ class EffectsSDKVideoCapturer(
             camera = if (device == "1") Camera.FRONT else Camera.BACK,
             resolution = Size(width, height)
         )
+        if (device == "1") currentPipelineOptions.isImageFlipped = true else currentPipelineOptions.isImageFlipped = false
         setPipelineOptionsFromCache(currentPipelineOptions)
     }
 
@@ -284,6 +285,10 @@ class EffectsSDKVideoCapturer(
         cameraPipeline?.setMode(mode)
     }
 
+    fun getPipelineMode(): PipelineMode? {
+        return cameraPipeline?.getMode()
+    }
+
     fun setBlurPower(blurPower: Float) {
         currentPipelineOptions.blurPower = blurPower
         cameraPipeline?.setBlurPower(blurPower)
@@ -299,9 +304,8 @@ class EffectsSDKVideoCapturer(
     }
 
     fun setBeautificationPower(power: Double) {
-        val intValue = (power * 100).toInt()
-        currentPipelineOptions.beautificationPower = intValue
-        cameraPipeline?.setBeautificationPower(intValue)
+        currentPipelineOptions.beautificationPower = power.toFloat()
+        cameraPipeline?.setBeautificationPower(power.toFloat())
     }
 
     fun getZoomLevel(): Double {
@@ -346,6 +350,9 @@ class EffectsSDKVideoCapturer(
         }
         currentPipelineOptions.colorCorrectionMode = colorCorrectionMode
         cameraPipeline?.setColorCorrectionMode(colorCorrectionMode)
+        if (colorCorrectionMode == ColorCorrectionMode.LOW_LIGHT_MODE) {
+            cameraPipeline?.updateLowLightLut()
+        }
     }
 
     fun setColorFilterStrength(strength: Double) {
@@ -365,6 +372,7 @@ class EffectsSDKVideoCapturer(
 
     private fun setPipelineOptionsFromCache(cache: EffectsSdkOptionsCache) {
         cameraPipeline?.let { pipeline ->
+            pipeline.setFlipX(cache.isImageFlipped)
             pipeline.setMode(cache.pipelineMode)
             pipeline.setBlurPower(cache.blurPower)
             pipeline.setColorCorrectionMode(cache.colorCorrectionMode)
@@ -380,12 +388,13 @@ class EffectsSDKVideoCapturer(
     }
 
     private data class EffectsSdkOptionsCache(
+        var isImageFlipped: Boolean = false,
         var pipelineMode: PipelineMode = PipelineMode.NO_EFFECT,
         var blurPower: Float = 0f,
         var colorCorrectionMode: ColorCorrectionMode = ColorCorrectionMode.NO_FILTER_MODE,
         var isSharpeningEnabled: Boolean = false,
         var isBeautificationEnabled: Boolean = false,
-        var beautificationPower: Int = 0,
+        var beautificationPower: Float = 0f,
         var colorFilterStrength: Float = 0f,
         var sharpeningStrength: Float = 0f,
         var zoomLevel: Int = 0,

@@ -52,6 +52,7 @@ import com.cloudwebrtc.webrtc.video.LocalVideoTrack;
 import com.cloudwebrtc.webrtc.video.VideoCapturerInfo;
 import com.cloudwebrtc.webrtc.video.camera.EffectsSDKVideoCapturer;
 import com.effectssdk.tsvb.EffectsSDKStatus;
+import com.effectssdk.tsvb.pipeline.PipelineMode;
 
 import org.webrtc.AudioSource;
 import org.webrtc.AudioTrack;
@@ -203,6 +204,13 @@ public class GetUserMediaImpl {
         }
     }
 
+    public PipelineMode getEffectsSdkPipelineMode(String trackId) {
+        EffectsSDKVideoCapturer capturer = getEffectsSdkVideoCapturer(trackId);
+        if (capturer != null) {
+            return capturer.getPipelineMode();
+        }
+        return null;
+    }
     public void enableEffectsSdkBeautification(String trackId, boolean enableBeautification) {
         EffectsSDKVideoCapturer capturer = getEffectsSdkVideoCapturer(trackId);
         if (capturer != null) {

@@ -43,6 +43,7 @@ import com.cloudwebrtc.webrtc.video.camera.CameraUtils;
 import com.cloudwebrtc.webrtc.video.camera.Point;
 import com.cloudwebrtc.webrtc.video.LocalVideoTrack;
 import com.effectssdk.tsvb.EffectsSDKStatus;
+import com.effectssdk.tsvb.pipeline.PipelineMode;
 import com.twilio.audioswitch.AudioDevice;
 
 import org.webrtc.AudioTrack;
@@ -1045,6 +1046,12 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
       }  
       case "getPipelineMode": {
         String trackId = call.argument("trackId");
+        PipelineMode mode = getEffectsSdkPipelineMode(trackId);
+        if (mode != null){
+          result.success(mode.toString());
+        } else {
+        result.success(false);
+        }
         break;
       }
       case "auth": {
@@ -1065,13 +1072,14 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
         String trackId = call.argument("trackId");
         String pipelineMode = call.argument("pipelineMode");
         setEffectsSdkPipelineMode(trackId, pipelineMode);
+        result.success(true);
         break;
       }
       case "setBlurPower": {
         String trackId = call.argument("trackId");
         double blurPower = call.argument("blurPower");
         setEffectsSdkBlurPower(trackId, blurPower);
-        result.success(null);
+        result.success(true);
         break;
       }
       case "setBackgroundImage": {
@@ -1079,11 +1087,13 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
         HashMap<String, Object> userMap = call.argument("image");
         if (userMap == null) {
           Log.e(TAG, "Missing image data");
+          result.success(false);
           break;
         }
         String type = (String) userMap.get("type");
         if (type == null) {
           Log.e(TAG, "Image type required");
+          result.success(false);
           break;
         }
         switch (type) {
@@ -1094,15 +1104,18 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
             BitmapFactory.Options bmOptions = new BitmapFactory.Options();
             Bitmap bitmap = BitmapFactory.decodeFile(image.getAbsolutePath(), bmOptions);
             setEffectsSdkBackgroundImage(trackId, bitmap);
+            result.success(true);
             break;
           }
           case "encoded": {
-            byte[] bitmapBytes = call.argument("data");
+            byte[] bitmapBytes = (byte[]) userMap.get("data");
             Bitmap bitmap = BitmapFactory.decodeByteArray(bitmapBytes, 0, bitmapBytes.length);
             if (bitmap != null) {
               setEffectsSdkBackgroundImage(trackId, bitmap);
+              result.success(true);
             } else {
               Log.e(TAG, "Decode bitmap error");
+              result.success(false);
             }
             break;
           }
@@ -1118,6 +1131,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
             Canvas canvas = new Canvas(bmp);
             canvas.drawColor(i);
             setEffectsSdkBackgroundImage(trackId, bmp);
+            result.success(true);
             break;
           }
           case "raw": {
@@ -1130,10 +1144,12 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
             Bitmap bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
             bmp.copyPixelsFromBuffer(ByteBuffer.wrap(data));
             setEffectsSdkBackgroundImage(trackId, bmp);
+            result.success(true);
             break;
           }
           default:
             Log.e(TAG, "Unknown image type");
+            result.success(false);
             break;
         }
         break;
@@ -1142,6 +1158,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
         String trackId = call.argument("trackId");
         boolean enableBeautification = call.argument("enable");
         enableEffectsSdkBeautification(trackId, enableBeautification);
+        result.success(true);
         break;
       }
       case "isBeautificationEnabled": {
@@ -1154,6 +1171,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
         String trackId = call.argument("trackId");
         double beautificationPower = call.argument("beautificationPower");
         setEffectsSdkBeautificationPower(trackId, beautificationPower);
+        result.success(true);
         break;
       }
       case "getZoomLevel": {
@@ -1166,12 +1184,14 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
         String trackId = call.argument("trackId");
         double zoomLevel = call.argument("zoomLevel");
         setEffectsSdkZoomLevel(trackId, zoomLevel);
+        result.success(true);
         break;
       }
       case "enableSharpening": {
         String trackId = call.argument("trackId");
         boolean enableSharpening = call.argument("enable");
         enableEffectsSdkSharpening(trackId, enableSharpening);
+        result.success(true);
         break;
       }
       case "getSharpeningStrength": {
@@ -1184,18 +1204,21 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
         String trackId = call.argument("trackId");
         double strength = call.argument("strength");
         setEffectsSdkSharpeningStrength(trackId, strength);
+        result.success(true);
         break;
       }
       case "setColorCorrectionMode": {
         String trackId = call.argument("trackId");
         String colorCorrectionMode = call.argument("colorCorrectionMode");
         setEffectsSdkColorCorrectionMode(trackId, colorCorrectionMode);
+        result.success(true);
         break;
       }
       case "setColorFilterStrength": {
         String trackId = call.argument("trackId");
         double strength = call.argument("strength");
         setEffectsSdkColorFilterStrength(trackId, strength);
+        result.success(true);
         break;
       }
       case "setColorGradingReferenceImage": {
@@ -1203,11 +1226,13 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
         HashMap<String, Object> userMap = call.argument("image");
         if (userMap == null) {
           Log.e(TAG, "Missing image data");
+          result.success(false);
           break;
         }
         String type = (String) userMap.get("type");
         if (type == null) {
           Log.e(TAG, "Image type required");
+          result.success(false);
           break;
         }
         switch (type) {
@@ -1218,15 +1243,18 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
             BitmapFactory.Options bmOptions = new BitmapFactory.Options();
             Bitmap bitmap = BitmapFactory.decodeFile(image.getAbsolutePath(), bmOptions);
             setEffectsSdkColorGradingReferenceImage(trackId, bitmap);
+            result.success(true);
             break;
           }
           case "encoded": {
-            byte[] bitmapBytes = call.argument("data");
+            byte[] bitmapBytes = (byte[]) userMap.get("data");;
             Bitmap bitmap = BitmapFactory.decodeByteArray(bitmapBytes, 0, bitmapBytes.length);
             if (bitmap != null) {
               setEffectsSdkColorGradingReferenceImage(trackId, bitmap);
+              result.success(true);
             } else {
               Log.e(TAG, "Decode bitmap error");
+              result.success(false);
             }
             break;
           }
@@ -1242,6 +1270,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
             Canvas canvas = new Canvas(bmp);
             canvas.drawColor(i);
             setEffectsSdkColorGradingReferenceImage(trackId, bmp);
+            result.success(true);
             break;
           }
           case "raw": {
@@ -1254,10 +1283,12 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
             Bitmap bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
             bmp.copyPixelsFromBuffer(ByteBuffer.wrap(data));
             setEffectsSdkColorGradingReferenceImage(trackId, bmp);
+            result.success(true);
             break;
           }
           default:
             Log.e(TAG, "Unknown image type");
+            result.success(false);
             break;
         }
         break;
@@ -2571,6 +2602,10 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
 
   private void setEffectsSdkPipelineMode(String trackId, String pipelineMode) {
     getUserMediaImpl.setEffectsSdkPipelineMode(trackId, pipelineMode);
+  }
+
+  private PipelineMode getEffectsSdkPipelineMode(String trackId) {
+    return getUserMediaImpl.getEffectsSdkPipelineMode(trackId);
   }
 
   private void setEffectsSdkBackgroundImage(String trackId, Bitmap bitmap) {
