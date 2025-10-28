@@ -11,6 +11,7 @@ import com.effectssdk.tsvb.pipeline.CameraPipeline
 import com.effectssdk.tsvb.pipeline.ColorCorrectionMode
 import com.effectssdk.tsvb.pipeline.OnFrameAvailableListener
 import com.effectssdk.tsvb.pipeline.PipelineMode
+import kotlinx.coroutines.runBlocking
 import org.webrtc.CameraEnumerator
 import org.webrtc.CameraVideoCapturer
 import org.webrtc.CameraVideoCapturer.CameraEventsHandler
@@ -19,6 +20,8 @@ import org.webrtc.NV21Buffer
 import org.webrtc.SurfaceTextureHelper
 import org.webrtc.VideoFrame
 import java.net.URL
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
 
 /**
@@ -30,27 +33,17 @@ class EffectsSDKVideoCapturer(
     enumerator: CameraEnumerator
 ) : CameraVideoCapturer {
 
-    @Volatile private var isPipelineCameraUsed: Boolean = false
-    //Set once dispose() runs. Guards against the async pipeline creation
-    //callback firing after the capturer was already disposed.
-    @Volatile private var disposed = false
-    //Guards the disposed flag together with the cameraPipeline lifecycle so the
-    //check-and-assign in the creation callback can't interleave with dispose().
-    private val pipelineLock = Any()
+    private var isPipelineCameraUsed: Boolean = false
+    private var warmUpRequired = true
     private var context: Context? = null
     private var capturerObserver: CapturerObserver? = null
     //Default WebRTC capturer. Used until EffectsSDK not ready to provide frames
     //You can remove this if you don't need non-processed frames
     private var webRtcCameraCapturer: CameraVideoCapturer? = null
 
-    @Volatile private var cameraPipeline: CameraPipeline? = null
-    private val currentPipelineOptions = EffectsSdkOptionsCache()
-    private var selectedCamera = Camera.FRONT
-
-    private var width = 720
-    private var height = 1280
-
-    private var framesActive = false
+    private var cameraPipeline: CameraPipeline? = null
+    private var defaultPipelineOptions = EffectsSdkOptionsCache()
+    private var currentPipelineOptions = EffectsSdkOptionsCache()
 
     init {
         //Custom event handler. Used until EffectsSDK not ready to provide frames
@@ -112,12 +105,10 @@ class EffectsSDKVideoCapturer(
 
 
     override fun startCapture(width: Int, height: Int, framerate: Int) {
-        this.width = width
-        this.height = height
         if (!isPipelineCameraUsed) {
             webRtcCameraCapturer?.startCapture(width, height, framerate)
         } else {
-            synchronized(pipelineLock) { startPipelineFrames() }
+            createPipeline(height, width)
         }
     }
 
@@ -125,71 +116,47 @@ class EffectsSDKVideoCapturer(
         if (!isPipelineCameraUsed) {
             webRtcCameraCapturer?.stopCapture()
         } else {
-            synchronized(pipelineLock) { stopPipelineFrames() }
+            cameraPipeline?.setOnFrameAvailableListener(null)
+            cameraPipeline?.release()
+            cameraPipeline = null
         }
+        eventsHandler.onCameraClosed()
     }
 
-    private fun createPipeline() {
+    private fun createPipeline(width: Int = 1280, height: Int = 720) {
         val factory = EffectsSDK.createSDKFactory()
-        selectedCamera = if (device == "1") Camera.FRONT else Camera.BACK
         factory.createCameraPipelineAsync(
             context!!,
-            camera = selectedCamera,
+            camera = if (device == "1") Camera.FRONT else Camera.BACK,
             resolution = Size(width, height),
             mode = PipelineMode.REPLACE
         ) { pipeline ->
-            synchronized(pipelineLock) {
-                if (disposed) {
-                    pipeline.release()
-                    return@synchronized
-                }
-                cameraPipeline = pipeline
-                currentPipelineOptions.isImageFlipped = (device == "1")
-                pipeline.setResolution(Size(width, height))
-                pipeline.startPipeline()
-                setPipelineOptionsFromCache(currentPipelineOptions)
-                pipeline.setOnFrameAvailableListener(warmUpListener)
-                framesActive = true
-            }
+            cameraPipeline = pipeline
+            cameraPipeline?.startPipeline()
+            cameraPipeline?.setOnFrameAvailableListener(warmUpListener)
         }
     }
 
+    /*
+     * If you don't need frames, you should set "empty" options to avoid background segmentation
+     */
     fun enableVideo(enabled: Boolean) {
-        synchronized(pipelineLock) {
-            if (enabled) startPipelineFrames() else stopPipelineFrames()
+        if (enabled) {
+            cameraPipeline?.setOnFrameAvailableListener(onFrameAvailableListener)
+        } else {
+            cameraPipeline?.setOnFrameAvailableListener(null)
         }
     }
 
     override fun changeCaptureFormat(width: Int, height: Int, framerate: Int) {
         if (!isPipelineCameraUsed) {
             webRtcCameraCapturer?.changeCaptureFormat(width, height, framerate)
-        } else {
-            synchronized(pipelineLock) {
-                this.width = width
-                this.height = height
-                cameraPipeline?.setResolution(Size(width, height))
-            }
         }
     }
 
     override fun dispose() {
-        synchronized(pipelineLock) {
-            disposed = true
-
-            if (framesActive) {
-                cameraPipeline?.setOnFrameAvailableListener(null)
-                framesActive = false
-            }
-            cameraPipeline?.stopPipeline()
-            cameraPipeline?.release()
-            cameraPipeline = null
-
+        if (!isPipelineCameraUsed) {
             webRtcCameraCapturer?.dispose()
-            webRtcCameraCapturer = null
-
-            capturerObserver = null
-            context = null
-            isPipelineCameraUsed = false
         }
     }
 
@@ -200,42 +167,18 @@ class EffectsSDKVideoCapturer(
     override fun switchCamera(switchEventsHandler: CameraVideoCapturer.CameraSwitchHandler?) {
         if (!isPipelineCameraUsed) {
             webRtcCameraCapturer?.switchCamera(switchEventsHandler)
-        } else {
-            selectedCamera = if (selectedCamera == Camera.FRONT) Camera.BACK else Camera.FRONT
-            cameraPipeline?.switchCamera(selectedCamera)
-            switchEventsHandler?.onCameraSwitchDone(selectedCamera == Camera.FRONT)
         }
+        switchEventsHandler?.onCameraSwitchDone(true)
     }
 
     override fun switchCamera(
         switchEventsHandler: CameraVideoCapturer.CameraSwitchHandler?,
-        cameraName: String?
+        p1: String?
     ) {
         if (!isPipelineCameraUsed) {
-            webRtcCameraCapturer?.switchCamera(switchEventsHandler, cameraName)
-        } else {
-            //Device id "1" is the front camera (same mapping as createPipeline).
-            selectedCamera = if (cameraName == "1") Camera.FRONT else Camera.BACK
-            cameraPipeline?.switchCamera(selectedCamera)
-            switchEventsHandler?.onCameraSwitchDone(selectedCamera == Camera.FRONT)
+            webRtcCameraCapturer?.switchCamera(switchEventsHandler, p1)
         }
-    }
-
-    private fun startPipelineFrames() {
-        val pipeline = cameraPipeline ?: return
-        pipeline.setResolution(Size(width, height))
-        if (framesActive) return
-        pipeline.startPipeline()
-        setPipelineOptionsFromCache(currentPipelineOptions)
-        pipeline.setOnFrameAvailableListener(onFrameAvailableListener)
-        framesActive = true
-    }
-
-    private fun stopPipelineFrames() {
-        if (!framesActive) return
-        cameraPipeline?.setOnFrameAvailableListener(null)
-        cameraPipeline?.stopPipeline()
-        framesActive = false
+        switchEventsHandler?.onCameraSwitchDone(true)
     }
 
     private fun getNV21(scaled: Bitmap): ByteArray {
@@ -280,15 +223,12 @@ class EffectsSDKVideoCapturer(
         }
     }
 
-    //Receives the first frames from the EffectsSDK pipeline while the plain
-    //WebRTC capturer is still feeding the track. Once the pipeline is confirmed
-    //to be producing output we swap over: stop the WebRTC camera and start
-    //forwarding processed frames. Running here (on the pipeline frame thread)
-    //avoids blocking the main thread on stopCapture() and guarantees there is no
-    //frozen/black gap during the switch.
-    private val warmUpListener = OnFrameAvailableListener { _, _ ->
-        synchronized(pipelineLock) {
-            if (disposed || isPipelineCameraUsed) return@OnFrameAvailableListener
+    private var warmUpListener = OnFrameAvailableListener { bitmap, timestamp ->
+        if (warmUpRequired) {
+            if (device == "1") currentPipelineOptions.isImageFlipped = true else currentPipelineOptions.isImageFlipped = false
+            setPipelineOptionsFromCache(currentPipelineOptions)
+            warmUpRequired = false
+        } else {
             isPipelineCameraUsed = true
             webRtcCameraCapturer?.stopCapture()
             webRtcCameraCapturer?.dispose()
@@ -296,27 +236,44 @@ class EffectsSDKVideoCapturer(
             cameraPipeline?.setOnFrameAvailableListener(onFrameAvailableListener)
         }
     }
-
     private val onFrameAvailableListener = OnFrameAvailableListener { bitmap, timestamp ->
-        val videoFrame = VideoFrame(
-            NV21Buffer(
-                getNV21(bitmap),
-                bitmap.width,
-                bitmap.height,
-                { bitmap.recycle() }
-            ),
-            0,
-            timestamp * 1_000_000 //millisectonds to nanoseconds
-        )
-        capturerObserver?.onFrameCaptured(videoFrame)
+            val videoFrame = VideoFrame(
+                NV21Buffer(
+                    getNV21(bitmap),
+                    bitmap.width,
+                    bitmap.height,
+                    { bitmap.recycle() }
+                ),
+                0,
+                timestamp * 1_000_000 //millisectonds to nanoseconds
+            )
+            capturerObserver?.onFrameCaptured(videoFrame)
     }
 
-    fun initializeEffectsSdk(customerId: String, url: String?, callback: EffectsSdkInitCallback) {
-        EffectsSDK.initialize(context!!, customerId, url?.let { URL(it) }) { status ->
-            if (status == EffectsSDKStatus.ACTIVE) {
-                createPipeline()
+    fun initializeEffectsSdk(customerId: String, url: String?): EffectsSDKStatus {
+        var result: EffectsSDKStatus
+        runBlocking {
+            result = if (url == null) {
+                initializeCallback(context!!, customerId)
+            } else {
+                initializeCallback(context!!, customerId, URL(url))
             }
-            callback.onResult(status)
+        }
+        if (result == EffectsSDKStatus.ACTIVE) {
+            createPipeline()
+        }
+        return result
+    }
+
+    private suspend fun initializeCallback(
+        context: Context,
+        customerId: String,
+        url: URL? = null
+    ): EffectsSDKStatus {
+        return suspendCoroutine { continuation ->
+            EffectsSDK.initialize(context, customerId, url) { sdkStatus ->
+                continuation.resume(sdkStatus)
+            }
         }
     }
 
@@ -432,10 +389,6 @@ class EffectsSDKVideoCapturer(
             cache.backgroundBitmap?.let { img -> pipeline.setBackground(img) }
             cache.colorGradingReference?.let { img -> pipeline.setColorGradingReferenceImage(img) }
         }
-    }
-
-    fun interface EffectsSdkInitCallback {
-        fun onResult(status: EffectsSDKStatus)
     }
 
     private data class EffectsSdkOptionsCache(
