@@ -42,6 +42,7 @@ import com.cloudwebrtc.webrtc.utils.ObjectType;
 import com.cloudwebrtc.webrtc.utils.PermissionUtils;
 import com.cloudwebrtc.webrtc.utils.Utils;
 import com.cloudwebrtc.webrtc.video.camera.CameraUtils;
+import com.cloudwebrtc.webrtc.video.camera.EffectsSDKVideoCapturer;
 import com.cloudwebrtc.webrtc.video.camera.Point;
 import com.cloudwebrtc.webrtc.video.LocalVideoTrack;
 import com.effectssdk.tsvb.EffectsSDKStatus;
@@ -1087,8 +1088,8 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
         String trackId = call.argument("trackId");
         String customerKey = call.argument("customerKey");
         String apiUrl = call.argument("apiUrl");
-        EffectsSDKStatus status = initializeEffectsSdk(trackId, customerKey, apiUrl);
-        result.success(status.toString());
+        initializeEffectsSdk(trackId, customerKey, apiUrl, status ->
+            mainHandler.post(() -> result.success(status.toString())));
         break;
       }
       case "localAuth": {
@@ -2623,8 +2624,9 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
     getUserMediaImpl.setEffectsSdkBlurPower(trackId, blurPower);
   }
 
-  EffectsSDKStatus initializeEffectsSdk(String trackId, String customerKey, String apiUrl) {
-    return getUserMediaImpl.initializeEffectsSdk(trackId, customerKey, apiUrl);
+  void initializeEffectsSdk(String trackId, String customerKey, String apiUrl,
+                            EffectsSDKVideoCapturer.EffectsSdkInitCallback callback) {
+    getUserMediaImpl.initializeEffectsSdk(trackId, customerKey, apiUrl, callback);
   }
 
   EffectsSDKStatus initializeEffectsSdkLocal(String trackId, String localKey) {

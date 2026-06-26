@@ -174,12 +174,13 @@ public class GetUserMediaImpl {
         }
     }
 
-    public EffectsSDKStatus initializeEffectsSdk(String trackId, String customerId, String url) {
+    public void initializeEffectsSdk(String trackId, String customerId, String url, EffectsSDKVideoCapturer.EffectsSdkInitCallback callback) {
         EffectsSDKVideoCapturer capturer = getEffectsSdkVideoCapturer(trackId);
         if (capturer != null) {
-            return capturer.initializeEffectsSdk(customerId, url);
+            capturer.initializeEffectsSdk(customerId, url, callback);
+        } else {
+            callback.onResult(EffectsSDKStatus.INACTIVE);
         }
-        return EffectsSDKStatus.INACTIVE;
     }
 
     public void enableEffectsSdkVideoStream(String trackId, boolean enabled) {

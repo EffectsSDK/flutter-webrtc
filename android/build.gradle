@@ -56,5 +56,5 @@ dependencies {
     implementation 'com.github.davidliu:audioswitch:89582c47c9a04c62f90aa5e57251af4800a62c9a'
     implementation 'androidx.annotation:annotation:1.1.0'
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-    implementation 'ai.effectssdk:video:2.14.0'
+    implementation 'ai.effectssdk:video:2.14.1'
 }
