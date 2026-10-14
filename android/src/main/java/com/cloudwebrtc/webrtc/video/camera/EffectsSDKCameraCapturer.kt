@@ -8,9 +8,12 @@ import com.effectssdk.tsvb.Camera
 import com.effectssdk.tsvb.EffectsSDK
 import com.effectssdk.tsvb.EffectsSDKStatus
 import com.effectssdk.tsvb.pipeline.CameraPipeline
+import com.effectssdk.tsvb.pipeline.ColorCorrectionConfig
 import com.effectssdk.tsvb.pipeline.ColorCorrectionMode
+import com.effectssdk.tsvb.pipeline.LowLightConfig
 import com.effectssdk.tsvb.pipeline.OnFrameAvailableListener
 import com.effectssdk.tsvb.pipeline.PipelineMode
+import com.effectssdk.tsvb.pipeline.PortraitLightingOptions
 import org.webrtc.CameraEnumerator
 import org.webrtc.CameraVideoCapturer
 import org.webrtc.CameraVideoCapturer.CameraEventsHandler
@@ -397,9 +400,6 @@ class EffectsSDKVideoCapturer(
         }
         currentPipelineOptions.colorCorrectionMode = colorCorrectionMode
         cameraPipeline?.setColorCorrectionMode(colorCorrectionMode)
-        if (colorCorrectionMode == ColorCorrectionMode.LOW_LIGHT_MODE) {
-            cameraPipeline?.updateLowLightLut()
-        }
     }
 
     fun setColorFilterStrength(strength: Double) {
@@ -417,6 +417,74 @@ class EffectsSDKVideoCapturer(
         cameraPipeline?.setBackground(bitmap)
     }
 
+    fun enableNoiseSuppression(enable: Boolean) {
+        currentPipelineOptions.isNoiseSuppressionEnabled = enable
+        cameraPipeline?.enableNoiseSuppression(enable)
+    }
+
+    fun enablePortraitLighting(enable: Boolean) {
+        currentPipelineOptions.isPortraitLightingEnabled = enable
+        cameraPipeline?.enablePortraitLighting(enable)
+    }
+
+    fun setPortraitLightingOptions(lightStrength: Double, backgroundDarkness: Double) {
+        val options = PortraitLightingOptions(lightStrength.toFloat(), backgroundDarkness.toFloat())
+        currentPipelineOptions.portraitLightingOptions = options
+        cameraPipeline?.setPortraitLightingOptions(options)
+    }
+
+    fun setLowLightConfig(power: Double) {
+        val config = LowLightConfig(power.toFloat())
+        //The config already carries the power, drop the separately cached one.
+        currentPipelineOptions.lowLightConfig = config
+        currentPipelineOptions.lowLightPower = null
+        cameraPipeline?.setLowLightConfig(config)
+    }
+
+    fun setLowLightPower(power: Double) {
+        currentPipelineOptions.lowLightPower = power.toFloat()
+        cameraPipeline?.setLowLightPower(power.toFloat())
+    }
+
+    fun setColorCorrectionConfig(
+        autoMode: Boolean,
+        power: Double,
+        whiteBalance: Double,
+        exposure: Double,
+        temperature: Double,
+        tint: Double,
+        vibrance: Double,
+        contrast: Double,
+        updatePeriodMs: Double
+    ) {
+        val config = ColorCorrectionConfig(
+            autoMode,
+            power.toFloat(),
+            whiteBalance.toFloat(),
+            exposure.toFloat(),
+            temperature.toFloat(),
+            tint.toFloat(),
+            vibrance.toFloat(),
+            contrast.toFloat(),
+            updatePeriodMs.toFloat()
+        )
+        //The config already carries power and period, drop the separately cached ones.
+        currentPipelineOptions.colorCorrectionConfig = config
+        currentPipelineOptions.colorCorrectionPower = null
+        currentPipelineOptions.colorCorrectionPeriod = null
+        cameraPipeline?.setColorCorrectionConfig(config)
+    }
+
+    fun setColorCorrectionPower(power: Double) {
+        currentPipelineOptions.colorCorrectionPower = power.toFloat()
+        cameraPipeline?.setColorCorrectionPower(power.toFloat())
+    }
+
+    fun setColorCorrectionPeriod(periodMs: Double) {
+        currentPipelineOptions.colorCorrectionPeriod = periodMs.toFloat()
+        cameraPipeline?.setColorCorrectionPeriod(periodMs.toFloat())
+    }
+
     private fun setPipelineOptionsFromCache(cache: EffectsSdkOptionsCache) {
         cameraPipeline?.let { pipeline ->
             pipeline.setFlipX(cache.isImageFlipped)
@@ -431,6 +499,16 @@ class EffectsSDKVideoCapturer(
             pipeline.setZoomLevel(cache.zoomLevel)
             cache.backgroundBitmap?.let { img -> pipeline.setBackground(img) }
             cache.colorGradingReference?.let { img -> pipeline.setColorGradingReferenceImage(img) }
+            //New options are applied only if they were set explicitly,
+            //otherwise the SDK defaults stay in effect.
+            cache.isNoiseSuppressionEnabled?.let { pipeline.enableNoiseSuppression(it) }
+            cache.portraitLightingOptions?.let { pipeline.setPortraitLightingOptions(it) }
+            cache.isPortraitLightingEnabled?.let { pipeline.enablePortraitLighting(it) }
+            cache.lowLightConfig?.let { pipeline.setLowLightConfig(it) }
+            cache.lowLightPower?.let { pipeline.setLowLightPower(it) }
+            cache.colorCorrectionConfig?.let { pipeline.setColorCorrectionConfig(it) }
+            cache.colorCorrectionPower?.let { pipeline.setColorCorrectionPower(it) }
+            cache.colorCorrectionPeriod?.let { pipeline.setColorCorrectionPeriod(it) }
         }
     }
 
@@ -450,7 +528,15 @@ class EffectsSDKVideoCapturer(
         var sharpeningStrength: Float = 0f,
         var zoomLevel: Int = 0,
         var backgroundBitmap: Bitmap? = null,
-        var colorGradingReference: Bitmap? = null
+        var colorGradingReference: Bitmap? = null,
+        var isNoiseSuppressionEnabled: Boolean? = null,
+        var isPortraitLightingEnabled: Boolean? = null,
+        var portraitLightingOptions: PortraitLightingOptions? = null,
+        var lowLightConfig: LowLightConfig? = null,
+        var lowLightPower: Float? = null,
+        var colorCorrectionConfig: ColorCorrectionConfig? = null,
+        var colorCorrectionPower: Float? = null,
+        var colorCorrectionPeriod: Float? = null
     )
 
 }

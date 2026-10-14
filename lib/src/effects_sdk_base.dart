@@ -84,4 +84,44 @@ abstract class VideoEffectsSdkBase {
     MediaStreamTrack mediaStreamTrack,
     EffectsSdkImage image,
   );
+
+  Future<void> enableNoiseSuppression(
+    MediaStreamTrack mediaStreamTrack,
+    bool enable,
+  );
+
+  Future<void> enablePortraitLighting(
+    MediaStreamTrack mediaStreamTrack,
+    bool enable,
+  );
+
+  Future<void> setPortraitLightingOptions(
+    MediaStreamTrack mediaStreamTrack,
+    PortraitLightingOptions options,
+  );
+
+  Future<void> setLowLightConfig(
+    MediaStreamTrack mediaStreamTrack,
+    LowLightConfig config,
+  );
+
+  Future<void> setLowLightPower(
+    MediaStreamTrack mediaStreamTrack,
+    double power,
+  );
+
+  Future<void> setColorCorrectionConfig(
+    MediaStreamTrack mediaStreamTrack,
+    ColorCorrectionConfig config,
+  );
+
+  Future<void> setColorCorrectionPower(
+    MediaStreamTrack mediaStreamTrack,
+    double power,
+  );
+
+  Future<void> setColorCorrectionPeriod(
+    MediaStreamTrack mediaStreamTrack,
+    double periodMs,
+  );
 }

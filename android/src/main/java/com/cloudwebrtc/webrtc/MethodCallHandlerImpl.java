@@ -1251,9 +1251,91 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
         result.success(true);
         break;
       }
+      case "enableNoiseSuppression": {
+        String trackId = call.argument("trackId");
+        boolean enable = call.argument("enable");
+        enableEffectsSdkNoiseSuppression(trackId, enable);
+        result.success(true);
+        break;
+      }
+      case "enablePortraitLighting": {
+        String trackId = call.argument("trackId");
+        boolean enable = call.argument("enable");
+        enableEffectsSdkPortraitLighting(trackId, enable);
+        result.success(true);
+        break;
+      }
+      case "setPortraitLightingOptions": {
+        String trackId = call.argument("trackId");
+        Map<String, Object> options = call.argument("options");
+        if (options == null) {
+          Log.e(TAG, "Missing portrait lighting options");
+          result.success(false);
+          break;
+        }
+        setEffectsSdkPortraitLightingOptions(trackId,
+            (double) options.get("lightStrength"),
+            (double) options.get("backgroundDarkness"));
+        result.success(true);
+        break;
+      }
+      case "setLowLightConfig": {
+        String trackId = call.argument("trackId");
+        Map<String, Object> config = call.argument("config");
+        if (config == null) {
+          Log.e(TAG, "Missing low light config");
+          result.success(false);
+          break;
+        }
+        setEffectsSdkLowLightConfig(trackId, (double) config.get("power"));
+        result.success(true);
+        break;
+      }
+      case "setLowLightPower": {
+        String trackId = call.argument("trackId");
+        double power = call.argument("power");
+        setEffectsSdkLowLightPower(trackId, power);
+        result.success(true);
+        break;
+      }
+      case "setColorCorrectionConfig": {
+        String trackId = call.argument("trackId");
+        Map<String, Object> config = call.argument("config");
+        if (config == null) {
+          Log.e(TAG, "Missing color correction config");
+          result.success(false);
+          break;
+        }
+        setEffectsSdkColorCorrectionConfig(trackId,
+            (boolean) config.get("autoMode"),
+            (double) config.get("power"),
+            (double) config.get("whiteBalance"),
+            (double) config.get("exposure"),
+            (double) config.get("temperature"),
+            (double) config.get("tint"),
+            (double) config.get("vibrance"),
+            (double) config.get("contrast"),
+            (double) config.get("updatePeriodMs"));
+        result.success(true);
+        break;
+      }
+      case "setColorCorrectionPower": {
+        String trackId = call.argument("trackId");
+        double power = call.argument("power");
+        setEffectsSdkColorCorrectionPower(trackId, power);
+        result.success(true);
+        break;
+      }
+      case "setColorCorrectionPeriod": {
+        String trackId = call.argument("trackId");
+        double periodMs = call.argument("periodMs");
+        setEffectsSdkColorCorrectionPeriod(trackId, periodMs);
+        result.success(true);
+        break;
+      }
       case "setColorGradingReferenceImage": {
         String trackId = call.argument("trackId");
-        HashMap<String, Object> userMap = call.argument("image");
+        HashMap<String, Object> userMap = call.argument("reference");
         if (userMap == null) {
           Log.e(TAG, "Missing image data");
           result.success(false);
@@ -2687,6 +2769,42 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
 
   private void setEffectsSdkColorGradingReferenceImage(String trackId, Bitmap bitmap) {
     getUserMediaImpl.setEffectsSdkColorGradingReferenceImage(trackId, bitmap);
+  }
+
+  private void enableEffectsSdkNoiseSuppression(String trackId, boolean enable) {
+    getUserMediaImpl.enableEffectsSdkNoiseSuppression(trackId, enable);
+  }
+
+  private void enableEffectsSdkPortraitLighting(String trackId, boolean enable) {
+    getUserMediaImpl.enableEffectsSdkPortraitLighting(trackId, enable);
+  }
+
+  private void setEffectsSdkPortraitLightingOptions(String trackId, double lightStrength, double backgroundDarkness) {
+    getUserMediaImpl.setEffectsSdkPortraitLightingOptions(trackId, lightStrength, backgroundDarkness);
+  }
+
+  private void setEffectsSdkLowLightConfig(String trackId, double power) {
+    getUserMediaImpl.setEffectsSdkLowLightConfig(trackId, power);
+  }
+
+  private void setEffectsSdkLowLightPower(String trackId, double power) {
+    getUserMediaImpl.setEffectsSdkLowLightPower(trackId, power);
+  }
+
+  private void setEffectsSdkColorCorrectionConfig(String trackId, boolean autoMode, double power,
+                                                  double whiteBalance, double exposure, double temperature,
+                                                  double tint, double vibrance, double contrast,
+                                                  double updatePeriodMs) {
+    getUserMediaImpl.setEffectsSdkColorCorrectionConfig(trackId, autoMode, power, whiteBalance, exposure,
+        temperature, tint, vibrance, contrast, updatePeriodMs);
+  }
+
+  private void setEffectsSdkColorCorrectionPower(String trackId, double power) {
+    getUserMediaImpl.setEffectsSdkColorCorrectionPower(trackId, power);
+  }
+
+  private void setEffectsSdkColorCorrectionPeriod(String trackId, double periodMs) {
+    getUserMediaImpl.setEffectsSdkColorCorrectionPeriod(trackId, periodMs);
   }
 
 }

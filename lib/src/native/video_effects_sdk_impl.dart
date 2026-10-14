@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import '../../flutter_webrtc.dart';
 
 import '../effects_sdk_image.dart';
@@ -217,6 +219,118 @@ Future<void> setColorGradingReference(
         'reference': _serializeImage(image)
       },
     );
+}
+
+@override
+Future<void> enableNoiseSuppression(
+    MediaStreamTrack mediaStreamTrack,
+    bool enable,
+  ) async {
+    _ensureAndroid('enableNoiseSuppression');
+    await WebRTC.invokeMethod(
+      'enableNoiseSuppression',
+      <String, dynamic>{'trackId': mediaStreamTrack.id, 'enable': enable},
+    );
+}
+
+@override
+Future<void> enablePortraitLighting(
+    MediaStreamTrack mediaStreamTrack,
+    bool enable,
+  ) async {
+    _ensureAndroid('enablePortraitLighting');
+    await WebRTC.invokeMethod(
+      'enablePortraitLighting',
+      <String, dynamic>{'trackId': mediaStreamTrack.id, 'enable': enable},
+    );
+}
+
+@override
+Future<void> setPortraitLightingOptions(
+    MediaStreamTrack mediaStreamTrack,
+    PortraitLightingOptions options,
+  ) async {
+    _ensureAndroid('setPortraitLightingOptions');
+    await WebRTC.invokeMethod(
+      'setPortraitLightingOptions',
+      <String, dynamic>{
+        'trackId': mediaStreamTrack.id,
+        'options': options.toMap()
+      },
+    );
+}
+
+@override
+Future<void> setLowLightConfig(
+    MediaStreamTrack mediaStreamTrack,
+    LowLightConfig config,
+  ) async {
+    _ensureAndroid('setLowLightConfig');
+    await WebRTC.invokeMethod(
+      'setLowLightConfig',
+      <String, dynamic>{
+        'trackId': mediaStreamTrack.id,
+        'config': config.toMap()
+      },
+    );
+}
+
+@override
+Future<void> setLowLightPower(
+    MediaStreamTrack mediaStreamTrack,
+    double power,
+  ) async {
+    _ensureAndroid('setLowLightPower');
+    await WebRTC.invokeMethod(
+      'setLowLightPower',
+      <String, dynamic>{'trackId': mediaStreamTrack.id, 'power': power},
+    );
+}
+
+@override
+Future<void> setColorCorrectionConfig(
+    MediaStreamTrack mediaStreamTrack,
+    ColorCorrectionConfig config,
+  ) async {
+    _ensureAndroid('setColorCorrectionConfig');
+    await WebRTC.invokeMethod(
+      'setColorCorrectionConfig',
+      <String, dynamic>{
+        'trackId': mediaStreamTrack.id,
+        'config': config.toMap()
+      },
+    );
+}
+
+@override
+Future<void> setColorCorrectionPower(
+    MediaStreamTrack mediaStreamTrack,
+    double power,
+  ) async {
+    _ensureAndroid('setColorCorrectionPower');
+    await WebRTC.invokeMethod(
+      'setColorCorrectionPower',
+      <String, dynamic>{'trackId': mediaStreamTrack.id, 'power': power},
+    );
+}
+
+@override
+Future<void> setColorCorrectionPeriod(
+    MediaStreamTrack mediaStreamTrack,
+    double periodMs,
+  ) async {
+    _ensureAndroid('setColorCorrectionPeriod');
+    await WebRTC.invokeMethod(
+      'setColorCorrectionPeriod',
+      <String, dynamic>{'trackId': mediaStreamTrack.id, 'periodMs': periodMs},
+    );
+}
+
+/// Features added in Android SDK 2.15 are not implemented for iOS yet.
+void _ensureAndroid(String method) {
+    if (!Platform.isAndroid) {
+      throw UnimplementedError('$method is currently supported only on Android.');
+    }
 }
 
 /// Serializes [EffectsSdkImage] to platform-specific format.

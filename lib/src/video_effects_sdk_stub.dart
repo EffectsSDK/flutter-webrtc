@@ -143,4 +143,68 @@ Future<void> setColorGradingReference(
     throw UnimplementedError("Unimplemented for this platform.");
 }
 
+@override
+Future<void> enableNoiseSuppression(
+    MediaStreamTrack mediaStreamTrack,
+    bool enable,
+  ) async {
+    throw UnimplementedError("Unimplemented for this platform.");
+}
+
+@override
+Future<void> enablePortraitLighting(
+    MediaStreamTrack mediaStreamTrack,
+    bool enable,
+  ) async {
+    throw UnimplementedError("Unimplemented for this platform.");
+}
+
+@override
+Future<void> setPortraitLightingOptions(
+    MediaStreamTrack mediaStreamTrack,
+    PortraitLightingOptions options,
+  ) async {
+    throw UnimplementedError("Unimplemented for this platform.");
+}
+
+@override
+Future<void> setLowLightConfig(
+    MediaStreamTrack mediaStreamTrack,
+    LowLightConfig config,
+  ) async {
+    throw UnimplementedError("Unimplemented for this platform.");
+}
+
+@override
+Future<void> setLowLightPower(
+    MediaStreamTrack mediaStreamTrack,
+    double power,
+  ) async {
+    throw UnimplementedError("Unimplemented for this platform.");
+}
+
+@override
+Future<void> setColorCorrectionConfig(
+    MediaStreamTrack mediaStreamTrack,
+    ColorCorrectionConfig config,
+  ) async {
+    throw UnimplementedError("Unimplemented for this platform.");
+}
+
+@override
+Future<void> setColorCorrectionPower(
+    MediaStreamTrack mediaStreamTrack,
+    double power,
+  ) async {
+    throw UnimplementedError("Unimplemented for this platform.");
+}
+
+@override
+Future<void> setColorCorrectionPeriod(
+    MediaStreamTrack mediaStreamTrack,
+    double periodMs,
+  ) async {
+    throw UnimplementedError("Unimplemented for this platform.");
+}
+
 }

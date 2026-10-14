@@ -524,6 +524,46 @@ class VideoEffectsSdkImpl extends VideoEffectsSdkBase {
   }
 
   @override
+  Future<void> enableNoiseSuppression(MediaStreamTrack track, bool enable) async {
+    throw UnimplementedError("Noise suppression is not implemented on Web yet");
+  }
+
+  @override
+  Future<void> enablePortraitLighting(MediaStreamTrack track, bool enable) async {
+    throw UnimplementedError("Portrait lighting is not implemented on Web yet");
+  }
+
+  @override
+  Future<void> setPortraitLightingOptions(MediaStreamTrack track, PortraitLightingOptions options) async {
+    throw UnimplementedError("Portrait lighting is not implemented on Web yet");
+  }
+
+  @override
+  Future<void> setLowLightConfig(MediaStreamTrack track, LowLightConfig config) async {
+    throw UnimplementedError("Low light config is not implemented on Web yet");
+  }
+
+  @override
+  Future<void> setLowLightPower(MediaStreamTrack track, double power) async {
+    throw UnimplementedError("Low light power is not implemented on Web yet");
+  }
+
+  @override
+  Future<void> setColorCorrectionConfig(MediaStreamTrack track, ColorCorrectionConfig config) async {
+    throw UnimplementedError("Color correction config is not implemented on Web yet");
+  }
+
+  @override
+  Future<void> setColorCorrectionPower(MediaStreamTrack track, double power) async {
+    throw UnimplementedError("Color correction power is not implemented on Web yet");
+  }
+
+  @override
+  Future<void> setColorCorrectionPeriod(MediaStreamTrack track, double periodMs) async {
+    throw UnimplementedError("Color correction period is not implemented on Web yet");
+  }
+
+  @override
   Future<void> setSharpeningStrength(MediaStreamTrack track, double strength) async {
     final sdkContext = _getSDKContext(track);
     await sdkContext.getReady();
