@@ -1253,15 +1253,15 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
       }
       case "enableNoiseSuppression": {
         String trackId = call.argument("trackId");
-        boolean enable = call.argument("enable");
-        enableEffectsSdkNoiseSuppression(trackId, enable);
+        boolean noiseSuppressionEnabled = call.argument("enable");
+        enableEffectsSdkNoiseSuppression(trackId, noiseSuppressionEnabled);
         result.success(true);
         break;
       }
       case "enablePortraitLighting": {
         String trackId = call.argument("trackId");
-        boolean enable = call.argument("enable");
-        enableEffectsSdkPortraitLighting(trackId, enable);
+        boolean portraitLightingEnabled = call.argument("enable");
+        enableEffectsSdkPortraitLighting(trackId, portraitLightingEnabled);
         result.success(true);
         break;
       }
