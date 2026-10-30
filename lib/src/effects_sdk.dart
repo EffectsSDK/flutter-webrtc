@@ -19,8 +19,6 @@ enum VideoEffect {
 }
 
 enum SegmentationPreset {
-  lightning, 
-  speed,
   balanced,
   quality
 }
@@ -113,19 +111,19 @@ class VideoEffectSDKConfig {
 /// Currently applicable only for Android.
 class PortraitLightingOptions {
   const PortraitLightingOptions({
-    this.lightStrength = 0.6,
-    this.backgroundDarkness = 0.4,
+    this.lightStrength,
+    this.backgroundDarkness,
   });
 
   /// Strength of the light applied to the person.
   ///
   /// 0.6 by default.
-  final double lightStrength;
+  final double? lightStrength;
 
   /// How much the background is darkened.
   ///
   /// 0.4 by default.
-  final double backgroundDarkness;
+  final double? backgroundDarkness;
 
   /// @nodoc
   Map<String, dynamic> toMap() => <String, dynamic>{
@@ -134,74 +132,52 @@ class PortraitLightingOptions {
       };
 }
 
-/// Low light effect configuration.
-///
-/// Currently applicable only for Android.
-class LowLightConfig {
-  const LowLightConfig({this.power = 0.8});
-
-  /// Low light effect strength.
-  ///
-  /// 0.8 by default.
-  final double power;
-
-  /// @nodoc
-  Map<String, dynamic> toMap() => <String, dynamic>{'power': power};
-}
-
 /// Color correction effect configuration.
 ///
 /// Currently applicable only for Android.
 class ColorCorrectionConfig {
   const ColorCorrectionConfig({
-    this.autoMode = true,
-    this.power = 1.0,
-    this.whiteBalance = 0.0,
-    this.exposure = 0.0,
-    this.temperature = 0.0,
-    this.tint = 0.0,
-    this.vibrance = 0.0,
-    this.contrast = 0.0,
-    this.updatePeriodMs = 200.0,
+    this.autoMode,
+    this.whiteBalance,
+    this.exposure,
+    this.temperature,
+    this.tint,
+    this.vibrance,
+    this.contrast,
+    this.updatePeriodMs,
   });
 
   /// Enables automatic color correction based on the analysis of the video.
   ///
   /// true by default.
-  final bool autoMode;
-
-  /// Color correction effect strength.
-  ///
-  /// 1.0 by default.
-  final double power;
+  final bool? autoMode;
 
   /// White balance adjustment. 0.0 by default.
-  final double whiteBalance;
+  final double? whiteBalance;
 
   /// Exposure adjustment. 0.0 by default.
-  final double exposure;
+  final double? exposure;
 
   /// Color temperature adjustment. 0.0 by default.
-  final double temperature;
+  final double? temperature;
 
   /// Tint adjustment. 0.0 by default.
-  final double tint;
+  final double? tint;
 
   /// Vibrance adjustment. 0.0 by default.
-  final double vibrance;
+  final double? vibrance;
 
   /// Contrast adjustment. 0.0 by default.
-  final double contrast;
+  final double? contrast;
 
   /// Period of the video re-analysis in milliseconds.
   ///
   /// 200 by default.
-  final double updatePeriodMs;
+  final double? updatePeriodMs;
 
   /// @nodoc
   Map<String, dynamic> toMap() => <String, dynamic>{
         'autoMode': autoMode,
-        'power': power,
         'whiteBalance': whiteBalance,
         'exposure': exposure,
         'temperature': temperature,
@@ -471,32 +447,6 @@ class VideoEffectsSdk {
     return _impl.setPortraitLightingOptions(mediaStreamTrack, options);
   }
 
-  /// Sets low light effect configuration.
-  ///
-  /// Applied in [ColorCorrectionMode.lowLightMode].
-  /// Currently supported only on Android.
-  /// - [mediaStreamTrack]: Target media track
-  /// - [config]: New low light configuration
-  static Future<void> setLowLightConfig(
-    MediaStreamTrack mediaStreamTrack,
-    LowLightConfig config,
-  ) {
-    return _impl.setLowLightConfig(mediaStreamTrack, config);
-  }
-
-  /// Adjusts low light effect strength.
-  ///
-  /// Applied in [ColorCorrectionMode.lowLightMode].
-  /// Currently supported only on Android.
-  /// - [mediaStreamTrack]: Target media track
-  /// - [power]: Effect strength
-  static Future<void> setLowLightPower(
-    MediaStreamTrack mediaStreamTrack,
-    double power,
-  ) {
-    return _impl.setLowLightPower(mediaStreamTrack, power);
-  }
-
   /// Sets color correction configuration.
   ///
   /// Applied in [ColorCorrectionMode.colorCorrectionMode].
@@ -508,32 +458,6 @@ class VideoEffectsSdk {
     ColorCorrectionConfig config,
   ) {
     return _impl.setColorCorrectionConfig(mediaStreamTrack, config);
-  }
-
-  /// Adjusts color correction effect strength.
-  ///
-  /// Applied in [ColorCorrectionMode.colorCorrectionMode].
-  /// Currently supported only on Android.
-  /// - [mediaStreamTrack]: Target media track
-  /// - [power]: Effect strength
-  static Future<void> setColorCorrectionPower(
-    MediaStreamTrack mediaStreamTrack,
-    double power,
-  ) {
-    return _impl.setColorCorrectionPower(mediaStreamTrack, power);
-  }
-
-  /// Sets the period of the video re-analysis for color correction.
-  ///
-  /// Applied in [ColorCorrectionMode.colorCorrectionMode].
-  /// Currently supported only on Android.
-  /// - [mediaStreamTrack]: Target media track
-  /// - [periodMs]: Period in milliseconds
-  static Future<void> setColorCorrectionPeriod(
-    MediaStreamTrack mediaStreamTrack,
-    double periodMs,
-  ) {
-    return _impl.setColorCorrectionPeriod(mediaStreamTrack, periodMs);
   }
 
   static final VideoEffectsSdkBase _impl = VideoEffectsSdkImpl();

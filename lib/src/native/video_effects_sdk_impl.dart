@@ -261,33 +261,6 @@ Future<void> setPortraitLightingOptions(
 }
 
 @override
-Future<void> setLowLightConfig(
-    MediaStreamTrack mediaStreamTrack,
-    LowLightConfig config,
-  ) async {
-    _ensureAndroid('setLowLightConfig');
-    await WebRTC.invokeMethod(
-      'setLowLightConfig',
-      <String, dynamic>{
-        'trackId': mediaStreamTrack.id,
-        'config': config.toMap()
-      },
-    );
-}
-
-@override
-Future<void> setLowLightPower(
-    MediaStreamTrack mediaStreamTrack,
-    double power,
-  ) async {
-    _ensureAndroid('setLowLightPower');
-    await WebRTC.invokeMethod(
-      'setLowLightPower',
-      <String, dynamic>{'trackId': mediaStreamTrack.id, 'power': power},
-    );
-}
-
-@override
 Future<void> setColorCorrectionConfig(
     MediaStreamTrack mediaStreamTrack,
     ColorCorrectionConfig config,
@@ -299,30 +272,6 @@ Future<void> setColorCorrectionConfig(
         'trackId': mediaStreamTrack.id,
         'config': config.toMap()
       },
-    );
-}
-
-@override
-Future<void> setColorCorrectionPower(
-    MediaStreamTrack mediaStreamTrack,
-    double power,
-  ) async {
-    _ensureAndroid('setColorCorrectionPower');
-    await WebRTC.invokeMethod(
-      'setColorCorrectionPower',
-      <String, dynamic>{'trackId': mediaStreamTrack.id, 'power': power},
-    );
-}
-
-@override
-Future<void> setColorCorrectionPeriod(
-    MediaStreamTrack mediaStreamTrack,
-    double periodMs,
-  ) async {
-    _ensureAndroid('setColorCorrectionPeriod');
-    await WebRTC.invokeMethod(
-      'setColorCorrectionPeriod',
-      <String, dynamic>{'trackId': mediaStreamTrack.id, 'periodMs': periodMs},
     );
 }
 

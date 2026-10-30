@@ -100,28 +100,8 @@ abstract class VideoEffectsSdkBase {
     PortraitLightingOptions options,
   );
 
-  Future<void> setLowLightConfig(
-    MediaStreamTrack mediaStreamTrack,
-    LowLightConfig config,
-  );
-
-  Future<void> setLowLightPower(
-    MediaStreamTrack mediaStreamTrack,
-    double power,
-  );
-
   Future<void> setColorCorrectionConfig(
     MediaStreamTrack mediaStreamTrack,
     ColorCorrectionConfig config,
-  );
-
-  Future<void> setColorCorrectionPower(
-    MediaStreamTrack mediaStreamTrack,
-    double power,
-  );
-
-  Future<void> setColorCorrectionPeriod(
-    MediaStreamTrack mediaStreamTrack,
-    double periodMs,
   );
 }

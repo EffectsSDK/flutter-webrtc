@@ -168,41 +168,9 @@ Future<void> setPortraitLightingOptions(
 }
 
 @override
-Future<void> setLowLightConfig(
-    MediaStreamTrack mediaStreamTrack,
-    LowLightConfig config,
-  ) async {
-    throw UnimplementedError("Unimplemented for this platform.");
-}
-
-@override
-Future<void> setLowLightPower(
-    MediaStreamTrack mediaStreamTrack,
-    double power,
-  ) async {
-    throw UnimplementedError("Unimplemented for this platform.");
-}
-
-@override
 Future<void> setColorCorrectionConfig(
     MediaStreamTrack mediaStreamTrack,
     ColorCorrectionConfig config,
-  ) async {
-    throw UnimplementedError("Unimplemented for this platform.");
-}
-
-@override
-Future<void> setColorCorrectionPower(
-    MediaStreamTrack mediaStreamTrack,
-    double power,
-  ) async {
-    throw UnimplementedError("Unimplemented for this platform.");
-}
-
-@override
-Future<void> setColorCorrectionPeriod(
-    MediaStreamTrack mediaStreamTrack,
-    double periodMs,
   ) async {
     throw UnimplementedError("Unimplemented for this platform.");
 }
