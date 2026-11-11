@@ -3138,7 +3138,7 @@ static void FlutterWebRTCApplyFieldTrials(void) {
 			return true;
 		}
 		[self ensureSDKControllerOfTrack:track];
-		track.sdkPipelineController.sharpeningStrength = strength;
+		track.sdkPipelineController.colorFilterStrength = strength;
 		result(nil);
 		return true;
 	}
@@ -3159,7 +3159,56 @@ static void FlutterWebRTCApplyFieldTrials(void) {
 		result(nil);
 		return true;
 	}
-	
+	if ([@"enableNoiseSuppression" isEqualToString:call.method] ||
+		[@"enablePortraitLighting" isEqualToString:call.method]) {
+		NSString* trackId = call.arguments[@"trackId"];
+		bool enable = ((NSNumber*)call.arguments[@"enable"]).boolValue;
+		LocalVideoTrack* track =
+			[self getLocalVideoTrackForEffectsSDKWithId:trackId method:call.method result:result];
+		if (nil == track) {
+			return true;
+		}
+		if (![self checkAuth:call.method result:result]) {
+			return true;
+		}
+		if (!enable && (nil == track.sdkPipelineController)) {
+			result(nil);
+			return true;
+		}
+		[self ensureSDKControllerOfTrack:track];
+		FlutterError* error = [@"enableNoiseSuppression" isEqualToString:call.method]
+			? [track.sdkPipelineController setNoiseSuppressionEnabled:enable]
+			: [track.sdkPipelineController setPortraitLightingEnabled:enable];
+		result(error);
+		return true;
+	}
+	if ([@"setPortraitLightingOptions" isEqualToString:call.method] ||
+		[@"setColorCorrectionConfig" isEqualToString:call.method]) {
+		NSString* trackId = call.arguments[@"trackId"];
+		bool isPortraitLighting = [@"setPortraitLightingOptions" isEqualToString:call.method];
+		NSDictionary* values = call.arguments[isPortraitLighting ? @"options" : @"config"];
+		LocalVideoTrack* track =
+			[self getLocalVideoTrackForEffectsSDKWithId:trackId method:call.method result:result];
+		if (nil == track) {
+			return true;
+		}
+		if (![values isKindOfClass:[NSDictionary class]]) {
+			result([FlutterError errorWithCode:[NSString stringWithFormat:@"%@ failed", call.method]
+									   message:@"Error: Missing options"
+									   details:nil]);
+			return true;
+		}
+		[self ensureSDKControllerOfTrack:track];
+		if (isPortraitLighting) {
+			[track.sdkPipelineController setPortraitLightingOptions:values];
+		}
+		else {
+			[track.sdkPipelineController setColorCorrectionConfig:values];
+		}
+		result(nil);
+		return true;
+	}
+
 	return false;
 }
 

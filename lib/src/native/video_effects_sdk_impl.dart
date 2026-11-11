@@ -1,5 +1,3 @@
-import 'dart:io' show Platform;
-
 import '../../flutter_webrtc.dart';
 
 import '../effects_sdk_image.dart';
@@ -226,7 +224,6 @@ Future<void> enableNoiseSuppression(
     MediaStreamTrack mediaStreamTrack,
     bool enable,
   ) async {
-    _ensureAndroid('enableNoiseSuppression');
     await WebRTC.invokeMethod(
       'enableNoiseSuppression',
       <String, dynamic>{'trackId': mediaStreamTrack.id, 'enable': enable},
@@ -238,7 +235,6 @@ Future<void> enablePortraitLighting(
     MediaStreamTrack mediaStreamTrack,
     bool enable,
   ) async {
-    _ensureAndroid('enablePortraitLighting');
     await WebRTC.invokeMethod(
       'enablePortraitLighting',
       <String, dynamic>{'trackId': mediaStreamTrack.id, 'enable': enable},
@@ -250,12 +246,11 @@ Future<void> setPortraitLightingOptions(
     MediaStreamTrack mediaStreamTrack,
     PortraitLightingOptions options,
   ) async {
-    _ensureAndroid('setPortraitLightingOptions');
     await WebRTC.invokeMethod(
       'setPortraitLightingOptions',
       <String, dynamic>{
         'trackId': mediaStreamTrack.id,
-        'options': options.toMap()
+        'options': options._toMap()
       },
     );
 }
@@ -265,21 +260,13 @@ Future<void> setColorCorrectionConfig(
     MediaStreamTrack mediaStreamTrack,
     ColorCorrectionConfig config,
   ) async {
-    _ensureAndroid('setColorCorrectionConfig');
     await WebRTC.invokeMethod(
       'setColorCorrectionConfig',
       <String, dynamic>{
         'trackId': mediaStreamTrack.id,
-        'config': config.toMap()
+        'config': config._toMap()
       },
     );
-}
-
-/// Features added in Android SDK 2.15 are not implemented for iOS yet.
-void _ensureAndroid(String method) {
-    if (!Platform.isAndroid) {
-      throw UnimplementedError('$method is currently supported only on Android.');
-    }
 }
 
 /// Serializes [EffectsSdkImage] to platform-specific format.
@@ -305,4 +292,24 @@ Map<String, dynamic> _serializeImage(EffectsSdkImage image) {
     }
 }
 
+}
+
+extension _PortraitLightingOptionsSerialization on PortraitLightingOptions {
+  Map<String, dynamic> _toMap() => <String, dynamic>{
+        'lightStrength': lightStrength,
+        'backgroundDarkness': backgroundDarkness,
+      };
+}
+
+extension _ColorCorrectionConfigSerialization on ColorCorrectionConfig {
+  Map<String, dynamic> _toMap() => <String, dynamic>{
+        'autoMode': autoMode,
+        'whiteBalance': whiteBalance,
+        'exposure': exposure,
+        'temperature': temperature,
+        'tint': tint,
+        'vibrance': vibrance,
+        'contrast': contrast,
+        'updatePeriodMs': updatePeriodMs,
+      };
 }

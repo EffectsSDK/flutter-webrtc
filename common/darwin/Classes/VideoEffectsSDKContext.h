@@ -25,9 +25,6 @@ NSString* _Nonnull nameOfAuthStatus(TSVBAuthStatus status);
 @property(nonatomic, strong, nullable) id<TSVBReplacementController> replacementController;
 @property(nonatomic) bool sourceIsCamera;
 
--(void)lock;
--(void)unlock;
-
 @end
 
 @interface VideoEffectsSDKPipelineController: NSObject
@@ -40,6 +37,12 @@ NSString* _Nonnull nameOfAuthStatus(TSVBAuthStatus status);
 -(nullable FlutterError*)setZoomLevel:(float)level;
 -(nullable FlutterError*)setSharpeningEnabled:(bool)enabled;
 -(nullable FlutterError*)setColorFilterMode:(nonnull NSString*)mode;
+-(nullable FlutterError*)setNoiseSuppressionEnabled:(bool)enabled;
+-(nullable FlutterError*)setPortraitLightingEnabled:(bool)enabled;
+// Keys as in PortraitLightingOptions.toMap() of Dart; a missing or null value keeps the current one.
+-(void)setPortraitLightingOptions:(nonnull NSDictionary*)options;
+// Keys as in ColorCorrectionConfig.toMap() of Dart; a missing or null value keeps the current one.
+-(void)setColorCorrectionConfig:(nonnull NSDictionary*)config;
 
 @property(nonatomic) float blurPower;
 @property(nonatomic, readonly) bool beautificationEnabled;

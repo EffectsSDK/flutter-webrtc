@@ -1,6 +1,5 @@
 #import "VideoEffectsSDKContext.h"
 #import "VideoEffectsSDKExts.h"
-#import <os/lock.h>
 
 typedef enum ColorFilterMode_ {
 	noColorFilter,
@@ -26,9 +25,20 @@ static ColorFilterMode mapColorFilterName(NSString* mode) {
 	return [modeNum intValue];
 }
 
+// Copies the numbers of `source` into `target`; null (NSNull) and other values are skipped.
+static void mergeNumbers(NSMutableDictionary<NSString*, NSNumber*>* target, NSDictionary* source)
+{
+	[source enumerateKeysAndObjectsUsingBlock:^(id key, id value, BOOL* stop) {
+		if ([key isKindOfClass:[NSString class]] && [value isKindOfClass:[NSNumber class]]) {
+			target[key] = value;
+		}
+	}];
+}
+
+// The pipeline is thread-safe (SDK 2.6.0+): effects are configured from the main thread while
+// frames are processed on the capturer thread, which is the only caller of process.
 @implementation VideoEffectsSDKPipelineWrapper
 {
-	os_unfair_lock _lock;
 	id<TSVBPipeline> _sdkPipeline;
 	id<TSVBReplacementController> _replacementController;
 	id<TSVBFrameFactory> _frameFactory;
@@ -46,7 +56,6 @@ static ColorFilterMode mapColorFilterName(NSString* mode) {
 	if (self) {
 		_sdkPipeline = pipeline;
 		_frameFactory = frameFactory;
-		_lock = OS_UNFAIR_LOCK_INIT;
 	}
 	return self;
 }
@@ -58,18 +67,14 @@ static ColorFilterMode mapColorFilterName(NSString* mode) {
 	id<TSVBFrame> result = nil;
 	if (isPixelBuffer) {
 		RTC_OBJC_TYPE(RTCCVPixelBuffer)* pb = frameBuffer;
-		[self lock];
 		result = [_sdkPipeline processCVPixelBuffer:pb.pixelBuffer
 									metalCompatible:_sourceIsCamera
 										   rotation:toTSVBRotation(frame.rotation)
 											  error:nil];
-		[self unlock];
 	}
 	else {
 		id<TSVBFrame> inputFrame = [self toTSVBFrame:frame];
-		[self lock];
 		result = [_sdkPipeline process:inputFrame error:nil];
-		[self unlock];
 	}
 	if (nil != result) {
 		return [self toRTCFrame:result rotation:frame.rotation timestamp:frame.timeStampNs];
@@ -134,14 +139,6 @@ static ColorFilterMode mapColorFilterName(NSString* mode) {
 	return [[RTC_OBJC_TYPE(RTCVideoFrame) alloc] initWithBuffer:buffer rotation:rotation timeStampNs:timestamp];
 }
 
-- (void)lock {
-	os_unfair_lock_lock(&_lock);
-}
-
-- (void)unlock {
-	os_unfair_lock_unlock(&_lock);
-}
-
 -(id<TSVBPipeline>)pipeline {
 	return _sdkPipeline;
 }
@@ -171,7 +168,13 @@ static ColorFilterMode mapColorFilterName(NSString* mode) {
 	bool _beautificationEnabled;
 	bool _zoomEnabled;
 	bool _sharpeningEnabled;
+	bool _noiseSuppressionEnabled;
+	bool _portraitLightingEnabled;
 	ColorFilterMode _colorFilterMode;
+
+	// Set by Dart, applied to every new pipeline: the pipeline is dropped while no effect is enabled.
+	NSMutableDictionary<NSString*, NSNumber*>* _portraitLightingOptions;
+	NSMutableDictionary<NSString*, NSNumber*>* _colorCorrectionConfig;
 }
 
 - (nonnull instancetype)initWithSDKFactory:(nonnull TSVBSDKFactory *)factory frameFactory:(nonnull id<TSVBFrameFactory>)frameFactory adapter:(nonnull VideoProcessingAdapter*)adapter{
@@ -185,6 +188,8 @@ static ColorFilterMode mapColorFilterName(NSString* mode) {
 		_zoomLevel = 0.7;
 		_sharpeningStrength = 0.7;
 		_colorFilterStrength = 0.7;
+		_portraitLightingOptions = [NSMutableDictionary new];
+		_colorCorrectionConfig = [NSMutableDictionary new];
 	}
 	return self;
 }
@@ -209,9 +214,7 @@ static ColorFilterMode mapColorFilterName(NSString* mode) {
 	}
 	VideoEffectsSDKPipelineWrapper* wrapper = [self provideWrapper];
 	
-	[wrapper lock];
 	TSVBPipelineError result = [self setPipelineModeImpl:mode wrapper:wrapper];
-	[wrapper unlock];
 	
 	[self ensureWrapper];
 	
@@ -282,9 +285,7 @@ static ColorFilterMode mapColorFilterName(NSString* mode) {
 -(void)setBlurPower:(float)blurPower {
 	self->_blurPower = blurPower;
 	if (_blurEnabled) {
-		[_wrapper lock];
 		[[_wrapper pipeline] enableBlurBackgroundWithPower:blurPower];
-		[_wrapper unlock];
 	}
 }
 
@@ -295,9 +296,7 @@ static ColorFilterMode mapColorFilterName(NSString* mode) {
 -(void)setBackground:(id<TSVBFrame>)background {
 	_background = background;
 	if (_replaceEnabled) {
-		[_wrapper lock];
 		[[_wrapper replacementController] setBackground:background];
-		[_wrapper unlock];
 	}
 }
 
@@ -313,9 +312,7 @@ static ColorFilterMode mapColorFilterName(NSString* mode) {
 	
 	VideoEffectsSDKPipelineWrapper* wrapper = [self provideWrapper];
 	
-	[wrapper lock];
 	TSVBPipelineError result = [self setBeautificationEnabledImpl:enabled wrapper:wrapper];
-	[wrapper unlock];
 	
 	[self ensureWrapper];
 	
@@ -346,9 +343,7 @@ static ColorFilterMode mapColorFilterName(NSString* mode) {
 -(void)setBeautificationPower:(float)beautificationPower {
 	_beautificationPower = beautificationPower;
 	if (_beautificationEnabled) {
-		[_wrapper lock];
 		_wrapper.pipeline.beautificationLevel = _beautificationPower;
-		[_wrapper unlock];
 	}
 }
 
@@ -364,9 +359,7 @@ static ColorFilterMode mapColorFilterName(NSString* mode) {
 	
 	VideoEffectsSDKPipelineWrapper* wrapper = [self provideWrapper];
 	
-	[wrapper lock];
 	TSVBPipelineError result = [self setZoomLevel:value wrapper:wrapper];
-	[wrapper unlock];
 	
 	[self ensureWrapper];
 	
@@ -399,9 +392,7 @@ static ColorFilterMode mapColorFilterName(NSString* mode) {
 	
 	VideoEffectsSDKPipelineWrapper* wrapper = [self provideWrapper];
 	
-	[wrapper lock];
 	TSVBPipelineError result = [self setSharpeningEnabled:enabled wrapper:wrapper];
-	[wrapper unlock];
 	
 	[self ensureWrapper];
 	
@@ -429,12 +420,29 @@ static ColorFilterMode mapColorFilterName(NSString* mode) {
 	return _sharpeningStrength;
 }
 
--(void)sharpeningStrength:(float)value {
+-(void)setSharpeningStrength:(float)value {
 	_sharpeningStrength = value;
 	if (_sharpeningEnabled) {
-		[_wrapper lock];
 		[[_wrapper pipeline] setSharpeningPower:value];
-		[_wrapper unlock];
+	}
+}
+
+-(float)colorFilterStrength {
+	return _colorFilterStrength;
+}
+
+-(void)setColorFilterStrength:(float)value {
+	_colorFilterStrength = value;
+	switch (_colorFilterMode) {
+		case mlColorCorrection:
+		case colorGrading:
+			[[_wrapper pipeline] setColorCorrectionPower:value];
+			break;
+		case lowLight:
+			[[_wrapper pipeline] setLowLightAdjustmentPower:value];
+			break;
+		case noColorFilter:
+			break;
 	}
 }
 
@@ -446,9 +454,7 @@ static ColorFilterMode mapColorFilterName(NSString* mode) {
 	
 	VideoEffectsSDKPipelineWrapper* wrapper = [self provideWrapper];
 	
-	[wrapper lock];
 	FlutterError* error = [self setColorFilterMode:mode wrapper:wrapper];
-	[wrapper unlock];
 	
 	[self ensureWrapper];
 	
@@ -480,11 +486,11 @@ static ColorFilterMode mapColorFilterName(NSString* mode) {
 				];
 			}
 			errorCode =
-				[wrapper.pipeline enableColorCorrectionWithReferance:_colorGradingReference];
+				[wrapper.pipeline enableColorCorrectionWithReference:_colorGradingReference];
 			if (TSVBPipelineErrorOk == errorCode) {
 				[wrapper.pipeline disableLowLightAdjustment];
 				wrapper.pipeline.colorCorrectionPower = _colorFilterStrength;
-				_colorFilterMode = mlColorCorrection;
+				_colorFilterMode = colorGrading;
 			}
 		} break;
 		case lowLight: {
@@ -507,18 +513,117 @@ static ColorFilterMode mapColorFilterName(NSString* mode) {
 -(void)setColorGradingReference:(id<TSVBFrame>)colorGradingReference {
 	_colorGradingReference = colorGradingReference;
 	if (colorGrading == _colorFilterMode) {
-		[_wrapper lock];
-		[[_wrapper pipeline] enableColorCorrectionWithReferance:colorGradingReference];
-		[_wrapper unlock];
+		[[_wrapper pipeline] enableColorCorrectionWithReference:colorGradingReference];
+	}
+}
+
+-(nullable FlutterError*)setNoiseSuppressionEnabled:(bool)enabled {
+	if (enabled == _noiseSuppressionEnabled) {
+		return nil;
+	}
+
+	VideoEffectsSDKPipelineWrapper* wrapper = [self provideWrapper];
+
+	TSVBPipelineError result = TSVBPipelineErrorOk;
+	if (enabled) {
+		result = [wrapper.pipeline enableNoiseSuppression];
+		_noiseSuppressionEnabled = (TSVBPipelineErrorOk == result);
+	}
+	else {
+		[wrapper.pipeline disableNoiseSuppression];
+		_noiseSuppressionEnabled = false;
+	}
+
+	[self ensureWrapper];
+
+	return [self flutterErrorWithPipelineError:result method:@"enableNoiseSuppression"];
+}
+
+-(nullable FlutterError*)setPortraitLightingEnabled:(bool)enabled {
+	if (enabled == _portraitLightingEnabled) {
+		return nil;
+	}
+
+	VideoEffectsSDKPipelineWrapper* wrapper = [self provideWrapper];
+
+	TSVBPipelineError result = TSVBPipelineErrorOk;
+	if (enabled) {
+		result = [wrapper.pipeline enablePortraitLighting];
+		_portraitLightingEnabled = (TSVBPipelineErrorOk == result);
+	}
+	else {
+		[wrapper.pipeline disablePortraitLighting];
+		_portraitLightingEnabled = false;
+	}
+
+	[self ensureWrapper];
+
+	return [self flutterErrorWithPipelineError:result method:@"enablePortraitLighting"];
+}
+
+-(void)setPortraitLightingOptions:(nonnull NSDictionary*)options {
+	mergeNumbers(_portraitLightingOptions, options);
+	if (nil != _wrapper) {
+		[self applyPortraitLightingOptionsTo:_wrapper.pipeline];
+	}
+}
+
+-(void)setColorCorrectionConfig:(nonnull NSDictionary*)config {
+	mergeNumbers(_colorCorrectionConfig, config);
+	if (nil != _wrapper) {
+		[self applyColorCorrectionConfigTo:_wrapper.pipeline];
+	}
+}
+
+-(void)applyPortraitLightingOptionsTo:(nonnull id<TSVBPipeline>)pipeline {
+	id<TSVBPortraitLightingSettings> settings = pipeline.portraitLighting;
+	NSNumber* value = nil;
+	if ((value = _portraitLightingOptions[@"lightStrength"])) {
+		settings.lightStrength = value.floatValue;
+	}
+	if ((value = _portraitLightingOptions[@"backgroundDarkness"])) {
+		settings.backgroundDarkening = value.floatValue;
+	}
+}
+
+-(void)applyColorCorrectionConfigTo:(nonnull id<TSVBPipeline>)pipeline {
+	id<TSVBColorCorrectionSettings> settings = pipeline.colorCorrection;
+	NSNumber* value = nil;
+	if ((value = _colorCorrectionConfig[@"autoMode"])) {
+		settings.autoModeEnabled = value.boolValue;
+	}
+	if ((value = _colorCorrectionConfig[@"whiteBalance"])) {
+		settings.whiteBalance = value.floatValue;
+	}
+	if ((value = _colorCorrectionConfig[@"exposure"])) {
+		settings.exposure = value.floatValue;
+	}
+	if ((value = _colorCorrectionConfig[@"temperature"])) {
+		settings.temperature = value.floatValue;
+	}
+	if ((value = _colorCorrectionConfig[@"tint"])) {
+		settings.tint = value.floatValue;
+	}
+	if ((value = _colorCorrectionConfig[@"vibrance"])) {
+		settings.vibrance = value.floatValue;
+	}
+	if ((value = _colorCorrectionConfig[@"contrast"])) {
+		settings.contrast = value.floatValue;
+	}
+	if ((value = _colorCorrectionConfig[@"updatePeriodMs"])) {
+		settings.updateInterval = value.doubleValue / 1000.0;
 	}
 }
 
 -(VideoEffectsSDKPipelineWrapper*)provideWrapper{
 	if (nil == _wrapper) {
 		id<TSVBPipeline> pipeline = [_sdkFactory newPipeline];
+		// The pipeline keeps these settings while their effects are disabled.
+		[self applyPortraitLightingOptionsTo:pipeline];
+		[self applyColorCorrectionConfigTo:pipeline];
 		_wrapper = [[VideoEffectsSDKPipelineWrapper alloc] initWithSDKPipeline:pipeline frameFactory:_frameFactory];
 	}
-	
+
 	return _wrapper;
 }
 
@@ -547,6 +652,8 @@ static ColorFilterMode mapColorFilterName(NSString* mode) {
 		_beautificationEnabled ||
 		_zoomEnabled ||
 		_sharpeningEnabled ||
+		_noiseSuppressionEnabled ||
+		_portraitLightingEnabled ||
 		(noColorFilter != _colorFilterMode);
 }
 
@@ -576,6 +683,18 @@ static ColorFilterMode mapColorFilterName(NSString* mode) {
 			
 		case TSVBPipelineErrorEngineInitializationError:
 			errorText = @"Error: Failed to initialize engine";
+			break;
+
+		case TSVBPipelineErrorNotSupportedByBackend:
+			errorText = @"Error: The effect is not supported by the current backend";
+			break;
+
+		case TSVBPipelineErrorEnabledUnsupportedFeatures:
+			errorText = @"Error: An enabled effect is not supported by the requested backend";
+			break;
+
+		case TSVBPipelineErrorInvalidUsage:
+			errorText = @"Error: Invalid usage of the SDK";
 			break;
 	}
 	

@@ -108,7 +108,7 @@ class VideoEffectSDKConfig {
 
 /// Portrait lighting effect options.
 ///
-/// Currently applicable only for Android.
+/// Supported on Android and iOS.
 class PortraitLightingOptions {
   const PortraitLightingOptions({
     this.lightStrength,
@@ -124,17 +124,11 @@ class PortraitLightingOptions {
   ///
   /// 0.4 by default.
   final double? backgroundDarkness;
-
-  /// @nodoc
-  Map<String, dynamic> toMap() => <String, dynamic>{
-        'lightStrength': lightStrength,
-        'backgroundDarkness': backgroundDarkness,
-      };
 }
 
 /// Color correction effect configuration.
 ///
-/// Currently applicable only for Android.
+/// Supported on Android and iOS.
 class ColorCorrectionConfig {
   const ColorCorrectionConfig({
     this.autoMode,
@@ -174,18 +168,6 @@ class ColorCorrectionConfig {
   ///
   /// 200 by default.
   final double? updatePeriodMs;
-
-  /// @nodoc
-  Map<String, dynamic> toMap() => <String, dynamic>{
-        'autoMode': autoMode,
-        'whiteBalance': whiteBalance,
-        'exposure': exposure,
-        'temperature': temperature,
-        'tint': tint,
-        'vibrance': vibrance,
-        'contrast': contrast,
-        'updatePeriodMs': updatePeriodMs,
-      };
 }
 
 /// Video Effects SDK API class.
@@ -413,7 +395,7 @@ class VideoEffectsSdk {
 
   /// Enables/disables video noise suppression.
   ///
-  /// Currently supported only on Android.
+  /// Supported on Android and iOS.
   /// - [mediaStreamTrack]: Target media track
   /// - [enable]: true to enable, false to disable
   static Future<void> enableNoiseSuppression(
@@ -425,7 +407,7 @@ class VideoEffectsSdk {
 
   /// Enables/disables portrait lighting effect.
   ///
-  /// Currently supported only on Android.
+  /// Supported on Android and iOS.
   /// - [mediaStreamTrack]: Target media track
   /// - [enable]: true to enable, false to disable
   static Future<void> enablePortraitLighting(
@@ -437,7 +419,7 @@ class VideoEffectsSdk {
 
   /// Sets portrait lighting effect options.
   ///
-  /// Currently supported only on Android.
+  /// Supported on Android and iOS.
   /// - [mediaStreamTrack]: Target media track
   /// - [options]: New portrait lighting options
   static Future<void> setPortraitLightingOptions(
@@ -450,7 +432,7 @@ class VideoEffectsSdk {
   /// Sets color correction configuration.
   ///
   /// Applied in [ColorCorrectionMode.colorCorrectionMode].
-  /// Currently supported only on Android.
+  /// Supported on Android and iOS.
   /// - [mediaStreamTrack]: Target media track
   /// - [config]: New color correction configuration
   static Future<void> setColorCorrectionConfig(

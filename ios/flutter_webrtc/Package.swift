@@ -15,7 +15,7 @@ let package = Package(
     dependencies: [
         .package(name: "FlutterFramework", path: "../FlutterFramework"),
         // Keep the version in step with VideoEffectsSDK in flutter_webrtc.podspec.
-        .package(url: "https://github.com/EffectsSDK/swift-video-effects-sdk", exact: "2.5.1")
+        .package(url: "https://github.com/EffectsSDK/swift-video-effects-sdk", exact: "2.6.0")
     ],
     targets: [
         .binaryTarget(
