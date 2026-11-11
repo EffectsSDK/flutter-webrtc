@@ -25,7 +25,7 @@ dependencies:
 
 For the web, add the next line to your index.html.
 ```html
-<script src="https://effectssdk.ai/sdk/web/3.5.7/tsvb-web.js"></script>
+<script src="https://effectssdk.ai/sdk/web/3.14.0/tsvb-web.js"></script>
 ```
 
 2. Initialize Video Effects SDK.

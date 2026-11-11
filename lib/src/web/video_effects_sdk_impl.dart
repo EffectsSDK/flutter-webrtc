@@ -82,6 +82,7 @@ extension type VideoEffectsSdkJS._(JSObject _) implements JSObject {
   external bool? enableColorCorrector();
   external bool? disableColorCorrector();
   external bool? setColorCorrectorPower(double power);
+  external bool? setColorCorrectorConfig(JSAny? config);
 
   external bool? enableSharpnessEffect();
   external bool? disableSharpnessEffect();
@@ -94,6 +95,13 @@ extension type VideoEffectsSdkJS._(JSObject _) implements JSObject {
   external bool? enableLowLightEffect();
   external bool? disableLowLightEffect();
   external bool? setLowLightEffectPower(double power);
+
+  external bool? enableNoiseSuppression();
+  external bool? disableNoiseSuppression();
+
+  external bool? enablePortraitLighting();
+  external bool? disablePortraitLighting();
+  external bool? setPortraitLightingOptions(JSAny? options);
 
   external set onReady(JSFunction callback);
   external void onError(JSFunction callback);
@@ -171,33 +179,59 @@ extension VideoEffectsSdkErrorJSExt on VideoEffectsSdkErrorJS {
   }
 }
 
+/// Converts the map into a JS object, skipping entries with null values.
+JSObject jsObjectFromMap(Map<String, dynamic> values, String description) {
+  final filtered = <String, dynamic>{
+    for (final entry in values.entries)
+      if (null != entry.value) entry.key: entry.value
+  };
+  final result = filtered.jsify() as JSObject?;
+  if (null == result) {
+    throw 'Failure to convert the $description to a JS object';
+  }
+  return result;
+}
+
 extension VideoEffectSDKConfigJSExt on VideoEffectSDKConfig {
-  JSObject? toJSConfig() {
-    final configMap = Map<String, dynamic>();
-    void safeAssign(String key, dynamic value) {
-      if (null != value) {
-        configMap[key] = value;
-      }
-    }
+  JSObject toJSConfig() {
+    return jsObjectFromMap(<String, dynamic>{
+      'api_url': apiUrl,
+      'model_url': modelUrl,
+      'sdk_url': sdkUrl,
+      'preset': preset?.name,
+      'effects': effects?.map((e)=>e.name),
+      'proxy': proxy,
+      'provider': webInferenceProvider?.name,
+      'stats': stats,
+      'cache_models': cacheModels,
+      'test_inference': testInference,
+      'models': models,
+      'wasmPaths': wasmPaths,
+    }, 'config');
+  }
+}
 
-    safeAssign('api_url', this.apiUrl);
-    safeAssign('model_url', this.modelUrl);
-    safeAssign('sdk_url', this.sdkUrl);
-    safeAssign('preset', this.preset?.name);
-    safeAssign('effects', this.effects?.map((e)=>e.name));
-    safeAssign('proxy', this.proxy);
-    safeAssign('provider', this.webInferenceProvider?.name);
-    safeAssign('stats', this.stats);
-    safeAssign('cache_models', this.cacheModels);
-    safeAssign('test_inference', this.testInference);
-    safeAssign('models', this.models);
-    safeAssign('wasmPaths', this.wasmPaths);
+extension PortraitLightingOptionsJSExt on PortraitLightingOptions {
+  JSObject toJSOptions() {
+    return jsObjectFromMap(<String, dynamic>{
+      'LightStrength': lightStrength,
+      'BgDarkStrength': backgroundDarkness,
+    }, 'portrait lighting options');
+  }
+}
 
-    final result = configMap.jsify() as JSObject?;
-    if (null == result) {
-      throw 'Failure to convert the config to JS config';
-    }
-    return result;
+extension ColorCorrectionConfigJSExt on ColorCorrectionConfig {
+  JSObject toJSConfig() {
+    return jsObjectFromMap(<String, dynamic>{
+      'autoMode': autoMode,
+      'whiteBalance': whiteBalance,
+      'exposure': exposure,
+      'temperature': temperature,
+      'tint': tint,
+      'vibrance': vibrance,
+      'contrast': contrast,
+      'updatePeriod': updatePeriodMs,
+    }, 'color correction config');
   }
 }
 
@@ -226,11 +260,15 @@ class VideoEffectsSdkWebContext {
   ColorCorrectionMode colorCorrectionMode = ColorCorrectionMode.noFilterMode;
   bool beautificationEnabled = false;
   bool smartZoomEnabled = false;
+  bool noiseSuppressionEnabled = false;
+  bool portraitLightingEnabled = false;
 
   double blurPower = 0.7;
   double smartZoomLevel = 0;
   double sharpeningStrength = 0;
   EffectsSdkImage? backgroundImage = null;
+  PortraitLightingOptions? portraitLightingOptions = null;
+  ColorCorrectionConfig? colorCorrectionConfig = null;
 
   Future<T> callWhenReady<T>(FutureOr<T> Function() functor) {
     if (ready) {
@@ -265,14 +303,14 @@ class VideoEffectsSdkImpl extends VideoEffectsSdkBase {
   VideoEffectsSdkImpl() {
     if (!web.window.has('tsvb')) {
       throw StateError('tsvb has not been loaded.'
-          ' Please, add <script src="https://effectssdk.ai/sdk/web/3.5.7/tsvb-web.js"></script> to your index.html');
+          ' Please, add <script src="https://effectssdk.ai/sdk/web/3.14.0/tsvb-web.js"></script> to your index.html');
     }
   }
 
   VideoEffectsSdkWebContext createContext(String customerID)
   {
     final tsvb = web.window['tsvb'] as JSFunction;
-    VideoEffectsSdkJS jsContext = tsvb.callAsConstructor([customerID.toJS].toJS);
+    final jsContext = tsvb.callAsConstructor<VideoEffectsSdkJS>(customerID.toJS);
     void onError(VideoEffectsSdkErrorJS e){ this.onError(e); }
     jsContext.onError(onError.toJS);
 
@@ -524,23 +562,66 @@ class VideoEffectsSdkImpl extends VideoEffectsSdkBase {
   }
 
   @override
-  Future<void> enableNoiseSuppression(MediaStreamTrack track, bool enable) async {
-    throw UnimplementedError("Noise suppression is not implemented on Web yet");
+  Future<void> enableNoiseSuppression(MediaStreamTrack track, bool enable) {
+    return _enqueue(() async {
+      final sdkContext = _getSDKContext(track);
+      if (sdkContext.noiseSuppressionEnabled == enable) {
+        return;
+      }
+
+      await sdkContext.getReady();
+      bool ok = enable?
+        sdkContext.jsContext.enableNoiseSuppression() ?? false :
+        sdkContext.jsContext.disableNoiseSuppression() ?? false;
+      if (!ok) {
+        throw FeatureDisabledError("NoiseSuppression");
+      }
+      sdkContext.noiseSuppressionEnabled = enable;
+    });
   }
 
   @override
-  Future<void> enablePortraitLighting(MediaStreamTrack track, bool enable) async {
-    throw UnimplementedError("Portrait lighting is not implemented on Web yet");
+  Future<void> enablePortraitLighting(MediaStreamTrack track, bool enable) {
+    return _enqueue(() async {
+      final sdkContext = _getSDKContext(track);
+      if (sdkContext.portraitLightingEnabled == enable) {
+        return;
+      }
+
+      await sdkContext.getReady();
+      bool ok = enable?
+        sdkContext.jsContext.enablePortraitLighting() ?? false :
+        sdkContext.jsContext.disablePortraitLighting() ?? false;
+      if (!ok) {
+        throw FeatureDisabledError("PortraitLighting");
+      }
+      sdkContext.portraitLightingEnabled = enable;
+
+      final options = sdkContext.portraitLightingOptions;
+      if (enable && null != options) {
+        sdkContext.jsContext.setPortraitLightingOptions(options.toJSOptions());
+      }
+    });
   }
 
   @override
-  Future<void> setPortraitLightingOptions(MediaStreamTrack track, PortraitLightingOptions options) async {
-    throw UnimplementedError("Portrait lighting is not implemented on Web yet");
+  Future<void> setPortraitLightingOptions(MediaStreamTrack track, PortraitLightingOptions options) {
+    return _enqueue(() async {
+      final sdkContext = _getSDKContext(track);
+      sdkContext.portraitLightingOptions = options;
+      await sdkContext.getReady();
+      sdkContext.jsContext.setPortraitLightingOptions(options.toJSOptions());
+    });
   }
 
   @override
-  Future<void> setColorCorrectionConfig(MediaStreamTrack track, ColorCorrectionConfig config) async {
-    throw UnimplementedError("Color correction config is not implemented on Web yet");
+  Future<void> setColorCorrectionConfig(MediaStreamTrack track, ColorCorrectionConfig config) {
+    return _enqueue(() async {
+      final sdkContext = _getSDKContext(track);
+      sdkContext.colorCorrectionConfig = config;
+      await sdkContext.getReady();
+      sdkContext.jsContext.setColorCorrectorConfig(config.toJSConfig());
+    });
   }
 
   @override
