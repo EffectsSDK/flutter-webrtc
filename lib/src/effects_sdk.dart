@@ -107,8 +107,6 @@ class VideoEffectSDKConfig {
 }
 
 /// Portrait lighting effect options.
-///
-/// Supported on Android, iOS, and Web.
 class PortraitLightingOptions {
   const PortraitLightingOptions({
     this.lightStrength,
@@ -127,8 +125,6 @@ class PortraitLightingOptions {
 }
 
 /// Color correction effect configuration.
-///
-/// Supported on Android, iOS, and Web.
 class ColorCorrectionConfig {
   const ColorCorrectionConfig({
     this.autoMode,
@@ -170,14 +166,14 @@ class ColorCorrectionConfig {
   final double? updatePeriodMs;
 }
 
-/// Video Effects SDK API class.
-/// 
-/// Video Effects SDK can only work with local video tracks.
+/// Video Effects SDK API for local video tracks.
+///
+/// The SDK supports Android, iOS, and Web.
 class VideoEffectsSdk {
   /// Initializes Video Effects SDK for the web.
   ///
-  /// Should be called before the first local camera stream created.
-  /// For native platforms do nothing.
+  /// Call this before creating the first local camera stream on Web.
+  /// On native platforms (Android, iOS), this method has no effect.
   /// - [customerID]: Unique customerID for authentication
   /// - [preload]: Start preloading models if true. 
   /// - [config]: Optional Web SDK configuration.
@@ -185,10 +181,9 @@ class VideoEffectsSdk {
     _impl.initialize(customerID, preload: preload, config: config);
   }
 
-  /// Authenticates SDK using remote service (Optional for the web).
+  /// Authenticates the SDK on Android and iOS by requesting a license over HTTPS.
   ///
-  /// Method performs https request to obtain license for customerID.
-  /// Optional if web platform 
+  /// On Web, this optional call waits for the SDK to be ready.
   /// - [mediaStreamTrack]: Associated media track
   /// - [customerID]: Unique customerID for authentication
   /// - [apiUrl]: Optional custom authentication endpoint
@@ -202,10 +197,11 @@ class VideoEffectsSdk {
     return _impl.auth(track, customerID, apiUrl: apiUrl);
   }
 
-  /// Offline authorization with a secret key.
+  /// Authorizes the SDK offline with a secret key on Android and iOS.
   /// 
   /// Authorizes the Effects SDK instance similar to [auth], but performs license verification without web requests. 
   /// Internet connection is not required.
+  /// On Web, this method throws [UnsupportedError].
   /// - [mediaStreamTrack]: Associated media track
   /// - [localKey]: Unique client’s secret key. DO NOT reveal it.
   /// - Returns: [AuthStatus] indicating authentication result
@@ -216,20 +212,17 @@ class VideoEffectsSdk {
     return _impl.localAuth(mediaStreamTrack, localKey);
   }
 
-  /// Wraps stream to attack the SDK (For web only). 
-  /// 
-  /// Behavior different between platforms:
-  /// * On web platform returns new stream with the sdk plugged in.
-  /// * On native platforms returns the same stream. (does nothing with it).
-  /// 
-  /// The caller is responsible for disposing of both the original stream and the created stream.
+  /// Attaches the SDK to a media stream on Web and returns the new stream.
+  ///
+  /// On Web, the caller is responsible for disposing of both streams.
+  /// On native platforms, this returns the original stream.
   static Future<MediaStream> wrapStream(MediaStream stream) {
     return _impl.wrapStream(stream);
   }
 
-  /// Returns original stream it was crated from.
-  /// 
-  /// This method can be used to get original stream to dispose it.
+  /// Returns the original stream passed to [wrapStream] on Web.
+  ///
+  /// Returns `null` on native platforms or if no original stream is found.
   static Future<MediaStream?> getWrappedStream(MediaStream stream) {
     return _impl.getWrappedStream(stream);
   }
@@ -361,6 +354,9 @@ class VideoEffectsSdk {
 
   /// Sets color correction processing mode.
   ///
+  /// On Web, passing [ColorCorrectionMode.colorGradingMode] throws
+  /// [UnsupportedError].
+  ///
   /// - [mediaStreamTrack]: Target media track
   /// - [colorCorrectionMode]: New color processing mode
   static Future<void> setColorCorrectionMode(
@@ -381,7 +377,9 @@ class VideoEffectsSdk {
     return _impl.setColorFilterStrength(mediaStreamTrack, strength);
   }
 
-  /// Sets reference image for color grading mode.
+  /// Sets the reference image for color grading on Android and iOS.
+  ///
+  /// On Web, this method has no effect.
   ///
   /// - [mediaStreamTrack]: Target media track
   /// - [image]: Reference image for color matching
@@ -395,7 +393,6 @@ class VideoEffectsSdk {
 
   /// Enables/disables video noise suppression.
   ///
-  /// Supported on Android, iOS, and Web.
   /// - [mediaStreamTrack]: Target media track
   /// - [enable]: true to enable, false to disable
   static Future<void> enableNoiseSuppression(
@@ -407,7 +404,6 @@ class VideoEffectsSdk {
 
   /// Enables/disables portrait lighting effect.
   ///
-  /// Supported on Android, iOS, and Web.
   /// - [mediaStreamTrack]: Target media track
   /// - [enable]: true to enable, false to disable
   static Future<void> enablePortraitLighting(
@@ -419,7 +415,6 @@ class VideoEffectsSdk {
 
   /// Sets portrait lighting effect options.
   ///
-  /// Supported on Android, iOS, and Web.
   /// - [mediaStreamTrack]: Target media track
   /// - [options]: New portrait lighting options
   static Future<void> setPortraitLightingOptions(
@@ -432,7 +427,6 @@ class VideoEffectsSdk {
   /// Sets color correction configuration.
   ///
   /// Applied in [ColorCorrectionMode.colorCorrectionMode].
-  /// Supported on Android, iOS, and Web.
   /// - [mediaStreamTrack]: Target media track
   /// - [config]: New color correction configuration
   static Future<void> setColorCorrectionConfig(
