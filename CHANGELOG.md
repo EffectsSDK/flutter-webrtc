@@ -1,6 +1,142 @@
 
 # Changelog
 
+[1.6.3] - 2026-10-26
+
+* fix(desktop): run task runner tasks without holding the queue lock (#2244)
+* chore: bump WebRTC-SDK to 150.7871.04 (drop compromised eMudhra CA root) (#2245)
+* chore(libwebrtc): bump libwebrtc to m150.7871.07 for Windows/Linux (drop compromised eMudhra CA root).
+* fix(desktop): write encoding changes back in RtpSender setParameters (#2211)
+* fix(darwin): resolve the plugin instance per engine and free it on engine teardown (#2221)
+* fix(windows): list the host app's own windows in desktop sources (#2226)
+* fix(darwin): discover capture devices off the main thread in getSources (#2229)
+* fix(macos): list desktop sources off the main thread (#2228)
+* fix(android): keep remote tracks added in Unified Plan rendering after getTransceivers() (#2230)
+* chore(example): add video processor sample for Android/iOS/macOS. (#2237)
+* feat(desktop): let native plugins attach video processors to local tracks (#2233)
+* fix(windows): stop VideoRendererDispose from releasing a renderer twice (#2235)
+* fix(darwin): duplicate null check for video renderer (#2219)
+* fix(desktop): captureFrame frees its RGBA buffer and no longer busy-waits (#2185)
+* feat(android): support constrained high-speed Camera2 capture (#2213)
+* fix(web): prevent native video interactions in HTML views (#2209)
+
+[1.6.2+hotfix.4] - 2026-10-07
+
+* [Darwin] fix(crash): do not dereference a freed video renderer from the first frame callback. Disposing a renderer while frames are in flight no longer crashes with `EXC_BAD_ACCESS` in `-[FlutterRTCVideoRenderer renderFrame:]` (#2190).
+* [Darwin] fix: keep `sharedSingleton` on the plugin instance that owns the peer connection factory. A second Flutter engine no longer replaces it with an instance that has no factory (#2186).
+* [iOS] refactor: take the audio session configuration lock once in `ensureAudioSession` (#2195).
+* [Android] fix: dispose video renderers when the plugin detaches from the engine (#2192).
+* [Android/Darwin/Windows/Linux] fix: enable SCTP SNAP instead of DSCP marking when WARP is enabled. Windows and Linux move to libwebrtc m150.7871.03 (#2188).
+* [Dart] fix: `RTCDataChannel.close()` moves the channel to the closed state and notifies listeners. `send()` after `close()` throws instead of reaching the platform (#2191).
+* [Windows/Linux] fix: synchronize data channel observer map access across the signaling and platform threads (#2194).
+
+[1.6.2+hotfix.3] - 2026-09-15
+
+* [Windows/Linux] fix: fixed fieldTrials copy in libwebrtc to fix WARP bug for Windows/Linux.
+* [Darwin] fix(darwin): stop leaking every platform view that is disposed (#2179).
+
+[1.6.2+hotfix.2] - 2026-09-14
+
+* [Darwin] fix: release event channel stream handlers on `peerConnectionDispose` instead of `peerConnectionClose`. `close()` followed by `dispose()` no longer reports `MissingPluginException` for `cancel` on `FlutterWebRTC/peerConnectionEvent` (#2172).
+* [Android] fix: release data channel event channel handlers and dispose the Java `DataChannel` wrapper when a channel is closed or its peer connection is disposed (#2174).
+* [Dart] fix: `RTCPeerConnection.dispose()` closes every data channel the connection created or received. `RTCDataChannel.close()` on native platforms is idempotent (#2175).
+* [Windows/Linux] fix(crash): keep the PeerConnection observer alive during disposal (#2171).
+
+[1.6.2+hotfix.1] - 2026-09-08
+
+* [Windows/Linux] fix(crash): Do not access the WebRTC API before calling EnsureWebRTCInitialized (#2169)
+
+[1.6.2] - 2026-09-07
+
+* [Darwin/Android/Windows/Linux] Add WARP support.
+
+[1.6.1] - 2026-09-01
+
+* [Darwin/Android/Windows/Linux] feat: upgrade libwebrtc to 150.7871.01.
+
+[1.6.0+hotfix.1] - 2026-08-21
+
+* [Darwin] fix: bump Webrtc.xcframework to 144.7559.10 to fix the regression.
+
+[1.6.0] - 2026-07-29
+
+* [Darwin] feat: Swift Package Manager support. Apps with Flutter's SPM integration enabled consume the plugin as a Swift package automatically; CocoaPods remains fully supported (#2062).
+* [iOS] fix: replace the private `RPSystemBroadcastPickerView` `buttonPressed:` selector with public UIKit APIs, App Store review rejected binaries containing it (#2121).
+* [Darwin/Android] fix: serialize data channel `eventSink`/`eventQueue` access between the WebRTC signaling thread and the platform thread. On iOS the unsynchronized access could crash with `EXC_BAD_ACCESS` in `objc_retain` inside `-[RTCDataChannel(Flutter) onListenWithArguments:eventSink:]` (#2118).
+* [Darwin] feat: expose the audio device module's microphone mute mode (`Helper.setMicrophoneMuteMode` / `Helper.getMicrophoneMuteMode`). `voiceProcessing` (the default) plays the platform mute tone on mute/unmute; `inputMixer` and `restartEngine` mute silently (#2098, #2105).
+* [Darwin/Android] feat: add ADM-level microphone mute (`Helper.setMicrophoneMuted` / `Helper.isMicrophoneMuted`), independent of `MediaStreamTrack.enabled` (#2105).
+* [iOS/macOS] feat: `RTCVideoPlatformView.placeholderBuilder` to show a widget until the first frame renders (#2102).
+* [Android] feat: option to disable the built-in hardware AEC/NS (#2104).
+* [Android] feat: expose `getStreamForId` to embedders (#2109).
+* [Android] fix: stop-time deadlock/ANR in `OrientationAwareScreenCapturer` (#2092).
+* [Android] fix: NPE in `setFocusPoint`/`setExposurePoint` when the orientation cache was never populated (#2113).
+* [Darwin] fix: create the parent directory before `captureFrame` writes the image file (#2090).
+
+[1.5.2] - 2026-06-20
+
+* [Android] expose the internally managed audio device module to embedders (#2099).
+* [Windows] fix libwebrtc extraction when the plugin is loaded through a symlink (#2100).
+
+[1.5.1] - 2026-06-14
+
+* [Android] fix: recreate the texture surface when the incoming frame size changes, so simulcast layer upgrades no longer stay blurry (#2085).
+* [Android] chore: bump audioswitch to 039a35ae, aligning with the LiveKit Android SDK (Communication Device API support, wired headset and Bluetooth fixes) (#2084).
+* [Android] feat: add `fullScreenOnly` option to `requestCapturePermission` to force entire-screen capture on API 34+ (#2079).
+* [Darwin] fix: call `SetRecordingDevice(0)` when no sourceId is supplied (#2072).
+
+[1.5.0] - 2026-06-12
+
+* [iOS/macOS] feat: enable platform rendering (`RTCVideoPlatFormView`) on macOS, with a shared Darwin implementation (#2058).
+* [iOS/macOS] feat: use the AVAudioEngine audio device module on both platforms, enabling Apple platform voice processing (AEC/NS/AGC) and the audio processing options API on macOS (#2009, #2082).
+* [Windows] feat: loopback capture for application and desktop audio (#2060).
+* [iOS/macOS] feat: allow embedders to own audio session management (#2069).
+* [Android] feat: expose the peer connection factory to embedders (#2077).
+* [Android] chore: support AGP 9 built-in Kotlin; apply KGP only when built-in Kotlin is inactive (#2075).
+* [Windows/Linux] fix: map echoCancellation/noiseSuppression/autoGainControl constraints to RTCAudioOptions (#2068).
+* [Android] fix: screen capture rotation (#2055) and rotation after orientation changes (#2048).
+* [Android] fix: prevent CameraAccessException on concurrent video calls (#2013).
+* [Android] fix: tolerate Qualcomm/Hisi encoders in VideoFileRenderer (#2030) and guard muxer writes against invalid sample buffers (#2031).
+* [Android] fix: IllegalStateException when the app is swipe-killed during a session (#2033).
+* [iOS] fix: audio session output port override for speaker toggle (#1941).
+* [Dart] fix: handling of `KeyDerivationAlgorithm` option (#2049).
+* [Windows/Linux] chore: drive prebuilt libwebrtc download from `third_party/libwebrtc_version.ini` (#2061).
+* [Darwin/Android] chore: bump WebRTC-SDK to 144.7559.09 (#2078).
+* [Windows/Linux] chore: bump prebuilt libwebrtc to m144.7559.09 (#2078).
+
+[1.4.1] -2026-03-24
+
+* [Dart] fixed scalabilityMode (#2022).
+* [Windows/Linux] sanitize UTF-8 for device strings before platform messages(#2021)
+
+[1.4.0] -2026-03-17
+
+* [macOS]: use ScreenCaptureKit for screen capture (fallback to RTCDesktopCapturer) by @EnterDevelopers in (#1991)
+* [libwebrtc]: bump version for libwebrtc to m144.
+* [Win/Linux]: DataPacketCryptor for win/linux.
+
+[1.3.1] - 2026-02-25
+
+* [iOS/macOS] chore: bump webrtc to v137.7151.12.
+* [Android] fix: avoid Turkish locale issue in DegradationPreference.valueOf (#2002)
+* [macOS] Refresh screen capture sources & permission check (#1977)
+* [macOS] fix(macos): use CoreAudio ADM to prevent screen share crash (#1990)
+
+[1.3.0] - 2026-01-26
+
+* [Mobile/Desktop/Web] feat: Add `priority` and `networkPriority` to RTCRtpEncoding (#1983)
+* [Android] fix(android): Prevent ClassCastException validating track kind in method "mediaStreamAddTrack" (#1980)
+* [Android] fix(android): resolve ConcurrentModificationException in audio callback (#1985)
+* [Android] feat(android): Add configurable audio sample rate with smart defaults (#1967)
+* [Android] fix:hisi chip Error 0x80001001 (#1969)
+* [iOS] fix(ios): resolve critical memory leak in video recording (#1960)
+
+[1.2.1] - 2025-11-21
+
+* [Linux] fix: Enable software AEC/NS/AGC for linux.
+* [Android] fix: Removed redundant null check and release for audioFileRenderer.
+* [Web] fix: Fix Android chrome mobile not rendering html <video> element (#1938)
+* [Web] fix: Clip hard edge on web's rtc_video_view (#1936)
+
 [1.2.0] - 2025-09-13
 
 * [Android] upgrade compileSdk to 36 as standard for 16kb pages support (#1925)

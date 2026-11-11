@@ -32,7 +32,12 @@ class FlutterWebRTCPluginImpl : public FlutterWebRTCPlugin {
     registrar->AddPlugin(std::move(plugin));
   }
 
-  virtual ~FlutterWebRTCPluginImpl() {}
+  virtual ~FlutterWebRTCPluginImpl() {
+    // Members are destroyed in reverse order, which would free task_runner_
+    // before webrtc_. FlutterWebRTC posts events through the task runner
+    // while it is torn down, so destroy it first.
+    webrtc_.reset();
+  }
 
   BinaryMessenger* messenger() { return messenger_; }
 
@@ -57,8 +62,9 @@ class FlutterWebRTCPluginImpl : public FlutterWebRTCPlugin {
                         std::unique_ptr<MethodResult> result) {
     // handle method call and forward to webrtc native sdk.
     auto method_call_proxy = MethodCallProxy::Create(method_call);
-    webrtc_->HandleMethodCall(*method_call_proxy.get(),
-                              MethodResultProxy::Create(std::move(result)));
+    webrtc_->HandleMethodCall(
+        *method_call_proxy.get(),
+        MethodResultProxy::Create(std::move(result), task_runner()));
   }
 
  private:
