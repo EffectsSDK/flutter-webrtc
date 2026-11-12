@@ -326,49 +326,21 @@ public class GetUserMediaImpl {
         }
     }
 
-    public void setEffectsSdkPortraitLightingOptions(String trackId, double lightStrength, double backgroundDarkness) {
+    public void setEffectsSdkPortraitLightingOptions(String trackId, Double lightStrength, Double backgroundDarkness) {
         EffectsSDKVideoCapturer capturer = getEffectsSdkVideoCapturer(trackId);
         if (capturer != null) {
             capturer.setPortraitLightingOptions(lightStrength, backgroundDarkness);
         }
     }
 
-    public void setEffectsSdkLowLightConfig(String trackId, double power) {
+    public void setEffectsSdkColorCorrectionConfig(String trackId, Boolean autoMode,
+                                                   Double whiteBalance, Double exposure, Double temperature,
+                                                   Double tint, Double vibrance, Double contrast,
+                                                   Double updatePeriodMs) {
         EffectsSDKVideoCapturer capturer = getEffectsSdkVideoCapturer(trackId);
         if (capturer != null) {
-            capturer.setLowLightConfig(power);
-        }
-    }
-
-    public void setEffectsSdkLowLightPower(String trackId, double power) {
-        EffectsSDKVideoCapturer capturer = getEffectsSdkVideoCapturer(trackId);
-        if (capturer != null) {
-            capturer.setLowLightPower(power);
-        }
-    }
-
-    public void setEffectsSdkColorCorrectionConfig(String trackId, boolean autoMode, double power,
-                                                   double whiteBalance, double exposure, double temperature,
-                                                   double tint, double vibrance, double contrast,
-                                                   double updatePeriodMs) {
-        EffectsSDKVideoCapturer capturer = getEffectsSdkVideoCapturer(trackId);
-        if (capturer != null) {
-            capturer.setColorCorrectionConfig(autoMode, power, whiteBalance, exposure, temperature,
+            capturer.setColorCorrectionConfig(autoMode, whiteBalance, exposure, temperature,
                     tint, vibrance, contrast, updatePeriodMs);
-        }
-    }
-
-    public void setEffectsSdkColorCorrectionPower(String trackId, double power) {
-        EffectsSDKVideoCapturer capturer = getEffectsSdkVideoCapturer(trackId);
-        if (capturer != null) {
-            capturer.setColorCorrectionPower(power);
-        }
-    }
-
-    public void setEffectsSdkColorCorrectionPeriod(String trackId, double periodMs) {
-        EffectsSDKVideoCapturer capturer = getEffectsSdkVideoCapturer(trackId);
-        if (capturer != null) {
-            capturer.setColorCorrectionPeriod(periodMs);
         }
     }
 

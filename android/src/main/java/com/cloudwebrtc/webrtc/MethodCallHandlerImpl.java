@@ -1450,27 +1450,8 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
           break;
         }
         setEffectsSdkPortraitLightingOptions(trackId,
-            (double) options.get("lightStrength"),
-            (double) options.get("backgroundDarkness"));
-        result.success(true);
-        break;
-      }
-      case "setLowLightConfig": {
-        String trackId = call.argument("trackId");
-        Map<String, Object> config = call.argument("config");
-        if (config == null) {
-          Log.e(TAG, "Missing low light config");
-          result.success(false);
-          break;
-        }
-        setEffectsSdkLowLightConfig(trackId, (double) config.get("power"));
-        result.success(true);
-        break;
-      }
-      case "setLowLightPower": {
-        String trackId = call.argument("trackId");
-        double power = call.argument("power");
-        setEffectsSdkLowLightPower(trackId, power);
+            (Double) options.get("lightStrength"),
+            (Double) options.get("backgroundDarkness"));
         result.success(true);
         break;
       }
@@ -1483,29 +1464,14 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
           break;
         }
         setEffectsSdkColorCorrectionConfig(trackId,
-            (boolean) config.get("autoMode"),
-            (double) config.get("power"),
-            (double) config.get("whiteBalance"),
-            (double) config.get("exposure"),
-            (double) config.get("temperature"),
-            (double) config.get("tint"),
-            (double) config.get("vibrance"),
-            (double) config.get("contrast"),
-            (double) config.get("updatePeriodMs"));
-        result.success(true);
-        break;
-      }
-      case "setColorCorrectionPower": {
-        String trackId = call.argument("trackId");
-        double power = call.argument("power");
-        setEffectsSdkColorCorrectionPower(trackId, power);
-        result.success(true);
-        break;
-      }
-      case "setColorCorrectionPeriod": {
-        String trackId = call.argument("trackId");
-        double periodMs = call.argument("periodMs");
-        setEffectsSdkColorCorrectionPeriod(trackId, periodMs);
+            (Boolean) config.get("autoMode"),
+            (Double) config.get("whiteBalance"),
+            (Double) config.get("exposure"),
+            (Double) config.get("temperature"),
+            (Double) config.get("tint"),
+            (Double) config.get("vibrance"),
+            (Double) config.get("contrast"),
+            (Double) config.get("updatePeriodMs"));
         result.success(true);
         break;
       }
@@ -3044,32 +3010,16 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
     getUserMediaImpl.enableEffectsSdkPortraitLighting(trackId, enable);
   }
 
-  private void setEffectsSdkPortraitLightingOptions(String trackId, double lightStrength, double backgroundDarkness) {
+  private void setEffectsSdkPortraitLightingOptions(String trackId, Double lightStrength, Double backgroundDarkness) {
     getUserMediaImpl.setEffectsSdkPortraitLightingOptions(trackId, lightStrength, backgroundDarkness);
   }
 
-  private void setEffectsSdkLowLightConfig(String trackId, double power) {
-    getUserMediaImpl.setEffectsSdkLowLightConfig(trackId, power);
-  }
-
-  private void setEffectsSdkLowLightPower(String trackId, double power) {
-    getUserMediaImpl.setEffectsSdkLowLightPower(trackId, power);
-  }
-
-  private void setEffectsSdkColorCorrectionConfig(String trackId, boolean autoMode, double power,
-                                                  double whiteBalance, double exposure, double temperature,
-                                                  double tint, double vibrance, double contrast,
-                                                  double updatePeriodMs) {
-    getUserMediaImpl.setEffectsSdkColorCorrectionConfig(trackId, autoMode, power, whiteBalance, exposure,
+  private void setEffectsSdkColorCorrectionConfig(String trackId, Boolean autoMode,
+                                                  Double whiteBalance, Double exposure, Double temperature,
+                                                  Double tint, Double vibrance, Double contrast,
+                                                  Double updatePeriodMs) {
+    getUserMediaImpl.setEffectsSdkColorCorrectionConfig(trackId, autoMode, whiteBalance, exposure,
         temperature, tint, vibrance, contrast, updatePeriodMs);
-  }
-
-  private void setEffectsSdkColorCorrectionPower(String trackId, double power) {
-    getUserMediaImpl.setEffectsSdkColorCorrectionPower(trackId, power);
-  }
-
-  private void setEffectsSdkColorCorrectionPeriod(String trackId, double periodMs) {
-    getUserMediaImpl.setEffectsSdkColorCorrectionPeriod(trackId, periodMs);
   }
 
 }

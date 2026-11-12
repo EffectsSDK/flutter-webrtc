@@ -10,7 +10,6 @@ import com.effectssdk.tsvb.EffectsSDKStatus
 import com.effectssdk.tsvb.pipeline.CameraPipeline
 import com.effectssdk.tsvb.pipeline.ColorCorrectionConfig
 import com.effectssdk.tsvb.pipeline.ColorCorrectionMode
-import com.effectssdk.tsvb.pipeline.LowLightConfig
 import com.effectssdk.tsvb.pipeline.OnFrameAvailableListener
 import com.effectssdk.tsvb.pipeline.PipelineMode
 import com.effectssdk.tsvb.pipeline.PortraitLightingOptions
@@ -403,8 +402,11 @@ class EffectsSDKVideoCapturer(
     }
 
     fun setColorFilterStrength(strength: Double) {
-        currentPipelineOptions.colorFilterStrength = strength.toFloat()
-        cameraPipeline?.setColorFilterStrength(strength.toFloat())
+        synchronized(pipelineLock) {
+            currentPipelineOptions.colorFilterStrength = strength.toFloat()
+            cameraPipeline?.setColorFilterStrength(strength.toFloat())
+            cameraPipeline?.setColorCorrectionPower(strength.toFloat())
+        }
     }
 
     fun setColorGradingReference(bitmap: Bitmap) {
@@ -427,62 +429,47 @@ class EffectsSDKVideoCapturer(
         cameraPipeline?.enablePortraitLighting(enable)
     }
 
-    fun setPortraitLightingOptions(lightStrength: Double, backgroundDarkness: Double) {
-        val options = PortraitLightingOptions(lightStrength.toFloat(), backgroundDarkness.toFloat())
-        currentPipelineOptions.portraitLightingOptions = options
-        cameraPipeline?.setPortraitLightingOptions(options)
-    }
-
-    fun setLowLightConfig(power: Double) {
-        val config = LowLightConfig(power.toFloat())
-        //The config already carries the power, drop the separately cached one.
-        currentPipelineOptions.lowLightConfig = config
-        currentPipelineOptions.lowLightPower = null
-        cameraPipeline?.setLowLightConfig(config)
-    }
-
-    fun setLowLightPower(power: Double) {
-        currentPipelineOptions.lowLightPower = power.toFloat()
-        cameraPipeline?.setLowLightPower(power.toFloat())
+    fun setPortraitLightingOptions(lightStrength: Double?, backgroundDarkness: Double?) {
+        synchronized(pipelineLock) {
+            val previous = currentPipelineOptions.portraitLightingOptions ?: PortraitLightingState()
+            val options = previous.copy(
+                lightStrength = lightStrength?.toFloat() ?: previous.lightStrength,
+                backgroundDarkness = backgroundDarkness?.toFloat() ?: previous.backgroundDarkness
+            )
+            currentPipelineOptions.portraitLightingOptions = options
+            cameraPipeline?.setPortraitLightingOptions(options.toSdkOptions())
+        }
     }
 
     fun setColorCorrectionConfig(
-        autoMode: Boolean,
-        power: Double,
-        whiteBalance: Double,
-        exposure: Double,
-        temperature: Double,
-        tint: Double,
-        vibrance: Double,
-        contrast: Double,
-        updatePeriodMs: Double
+        autoMode: Boolean?,
+        whiteBalance: Double?,
+        exposure: Double?,
+        temperature: Double?,
+        tint: Double?,
+        vibrance: Double?,
+        contrast: Double?,
+        updatePeriodMs: Double?
     ) {
-        val config = ColorCorrectionConfig(
-            autoMode,
-            power.toFloat(),
-            whiteBalance.toFloat(),
-            exposure.toFloat(),
-            temperature.toFloat(),
-            tint.toFloat(),
-            vibrance.toFloat(),
-            contrast.toFloat(),
-            updatePeriodMs.toFloat()
-        )
-        //The config already carries power and period, drop the separately cached ones.
-        currentPipelineOptions.colorCorrectionConfig = config
-        currentPipelineOptions.colorCorrectionPower = null
-        currentPipelineOptions.colorCorrectionPeriod = null
-        cameraPipeline?.setColorCorrectionConfig(config)
-    }
-
-    fun setColorCorrectionPower(power: Double) {
-        currentPipelineOptions.colorCorrectionPower = power.toFloat()
-        cameraPipeline?.setColorCorrectionPower(power.toFloat())
-    }
-
-    fun setColorCorrectionPeriod(periodMs: Double) {
-        currentPipelineOptions.colorCorrectionPeriod = periodMs.toFloat()
-        cameraPipeline?.setColorCorrectionPeriod(periodMs.toFloat())
+        synchronized(pipelineLock) {
+            val previous = currentPipelineOptions.colorCorrectionConfig ?: ColorCorrectionState()
+            val config = previous.copy(
+                autoMode = autoMode ?: previous.autoMode,
+                whiteBalance = whiteBalance?.toFloat() ?: previous.whiteBalance,
+                exposure = exposure?.toFloat() ?: previous.exposure,
+                temperature = temperature?.toFloat() ?: previous.temperature,
+                tint = tint?.toFloat() ?: previous.tint,
+                vibrance = vibrance?.toFloat() ?: previous.vibrance,
+                contrast = contrast?.toFloat() ?: previous.contrast,
+                updatePeriodMs = updatePeriodMs?.toFloat() ?: previous.updatePeriodMs
+            )
+            currentPipelineOptions.colorCorrectionConfig = config
+            cameraPipeline?.let { pipeline ->
+                pipeline.setColorCorrectionConfig(config.toSdkConfig(currentPipelineOptions.colorFilterStrength))
+                pipeline.setColorFilterStrength(currentPipelineOptions.colorFilterStrength)
+                pipeline.setColorCorrectionPower(currentPipelineOptions.colorFilterStrength)
+            }
+        }
     }
 
     private fun setPipelineOptionsFromCache(cache: EffectsSdkOptionsCache) {
@@ -494,7 +481,6 @@ class EffectsSDKVideoCapturer(
             pipeline.enableSharpening(cache.isSharpeningEnabled)
             pipeline.enableBeautification(cache.isBeautificationEnabled)
             pipeline.setBeautificationPower(cache.beautificationPower)
-            pipeline.setColorFilterStrength(cache.colorFilterStrength)
             pipeline.setSharpeningStrength(cache.sharpeningStrength)
             pipeline.setZoomLevel(cache.zoomLevel)
             cache.backgroundBitmap?.let { img -> pipeline.setBackground(img) }
@@ -502,18 +488,50 @@ class EffectsSDKVideoCapturer(
             //New options are applied only if they were set explicitly,
             //otherwise the SDK defaults stay in effect.
             cache.isNoiseSuppressionEnabled?.let { pipeline.enableNoiseSuppression(it) }
-            cache.portraitLightingOptions?.let { pipeline.setPortraitLightingOptions(it) }
+            cache.portraitLightingOptions?.let { pipeline.setPortraitLightingOptions(it.toSdkOptions()) }
             cache.isPortraitLightingEnabled?.let { pipeline.enablePortraitLighting(it) }
-            cache.lowLightConfig?.let { pipeline.setLowLightConfig(it) }
-            cache.lowLightPower?.let { pipeline.setLowLightPower(it) }
-            cache.colorCorrectionConfig?.let { pipeline.setColorCorrectionConfig(it) }
-            cache.colorCorrectionPower?.let { pipeline.setColorCorrectionPower(it) }
-            cache.colorCorrectionPeriod?.let { pipeline.setColorCorrectionPeriod(it) }
+            cache.colorCorrectionConfig?.let {
+                pipeline.setColorCorrectionConfig(it.toSdkConfig(cache.colorFilterStrength))
+            }
+            // Configs can carry their own power; restore the public filter strength last.
+            pipeline.setColorFilterStrength(cache.colorFilterStrength)
+            pipeline.setColorCorrectionPower(cache.colorFilterStrength)
         }
     }
 
     fun interface EffectsSdkInitCallback {
         fun onResult(status: EffectsSDKStatus)
+    }
+
+    // Keep partial updates independent of the SDK's non-nullable configuration API.
+    private data class PortraitLightingState(
+        val lightStrength: Float = 0.6f,
+        val backgroundDarkness: Float = 0.4f
+    ) {
+        fun toSdkOptions() = PortraitLightingOptions(lightStrength, backgroundDarkness)
+    }
+
+    private data class ColorCorrectionState(
+        val autoMode: Boolean = true,
+        val whiteBalance: Float = 0f,
+        val exposure: Float = 0f,
+        val temperature: Float = 0f,
+        val tint: Float = 0f,
+        val vibrance: Float = 0f,
+        val contrast: Float = 0f,
+        val updatePeriodMs: Float = 200f
+    ) {
+        fun toSdkConfig(power: Float) = ColorCorrectionConfig(
+            autoMode,
+            power,
+            whiteBalance,
+            exposure,
+            temperature,
+            tint,
+            vibrance,
+            contrast,
+            updatePeriodMs
+        )
     }
 
     private data class EffectsSdkOptionsCache(
@@ -531,12 +549,8 @@ class EffectsSDKVideoCapturer(
         var colorGradingReference: Bitmap? = null,
         var isNoiseSuppressionEnabled: Boolean? = null,
         var isPortraitLightingEnabled: Boolean? = null,
-        var portraitLightingOptions: PortraitLightingOptions? = null,
-        var lowLightConfig: LowLightConfig? = null,
-        var lowLightPower: Float? = null,
-        var colorCorrectionConfig: ColorCorrectionConfig? = null,
-        var colorCorrectionPower: Float? = null,
-        var colorCorrectionPeriod: Float? = null
+        var portraitLightingOptions: PortraitLightingState? = null,
+        var colorCorrectionConfig: ColorCorrectionState? = null
     )
 
 }
